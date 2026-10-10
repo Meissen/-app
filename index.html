@@ -1,0 +1,2546 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <!-- 限縮之內容安全策略 (CSP) 白名單 -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; connect-src 'self' https://generativelanguage.googleapis.com https://script.google.com https://script.googleusercontent.com; font-src 'self' data: https:; img-src 'self' data: https:;" />
+  <title>Polyglot SRS - 智慧多語對照學習系統</title>
+  
+  <!-- 引入具備 SRI 驗證與防篡改保護的 DOMPurify -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js" 
+    integrity="sha512-H+rglffZ6f5mzP7pqoNqqvBL8U3UCYjHgzkUrVUqmWB102F4VjFcGtUUgkVPQC4n1p4lhbpW5zyd18f0OdZZSQ==" 
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .app-container { height: 100dvh; max-height: 100dvh; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    ruby {
+      display: inline-flex;
+      flex-direction: column-reverse;
+      vertical-align: bottom;
+      align-items: center;
+      line-height: 1.1;
+      margin: 0 1px;
+    }
+    rt {
+      display: block;
+      font-size: 0.55em;
+      line-height: 1;
+      color: #a5b4fc;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 2px;
+      user-select: none;
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 antialiased selection:bg-indigo-500 selection:text-white">
+
+  <div class="app-container flex flex-col max-w-xl mx-auto bg-slate-900 shadow-2xl relative overflow-hidden">
+    
+    <!-- 測試模式警示 Banner (宣告式 data-action，無 inline onclick) -->
+    <div id="testBanner" class="hidden bg-amber-500 text-slate-950 font-bold px-4 py-1.5 text-xs text-center flex items-center justify-between z-30">
+      <span>🧪 測試模式運作中（此模式產生的單字可一鍵清理）</span>
+      <button data-action="clear-test-data" class="underline text-slate-900 font-extrabold hover:text-white">結束並清空</button>
+    </div>
+
+    <!-- 頂部 Header -->
+    <header class="flex items-center justify-between px-5 py-3 border-b border-slate-800 bg-slate-900/90 backdrop-blur z-20">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-white shadow-lg shadow-indigo-500/30">P</div>
+        <h1 class="text-base font-semibold tracking-wide">Polyglot SRS</h1>
+      </div>
+      <div id="statsBadge" class="text-xs bg-slate-800 px-3 py-1.5 rounded-full text-slate-400 border border-slate-700/50">
+        載入中...
+      </div>
+    </header>
+
+    <!-- SPA 視圖導航 (宣告式 data-action，無 inline onclick) -->
+    <nav class="flex border-b border-slate-800 bg-slate-950/60 px-2 py-1.5 gap-1 text-xs font-medium z-10 overflow-x-auto no-scrollbar">
+      <button data-action="navigate" data-target="flashcard" id="nav-flashcard" class="flex-1 min-w-[70px] py-2 rounded-lg text-center transition-all bg-indigo-600 text-white font-semibold">
+        字卡對照
+      </button>
+      <button data-action="navigate" data-target="spelling" id="nav-spelling" class="flex-1 min-w-[70px] py-2 rounded-lg text-center transition-all text-slate-400 hover:bg-slate-800">
+        拼寫訓練
+      </button>
+      <button data-action="navigate" data-target="sentence" id="nav-sentence" class="flex-1 min-w-[70px] py-2 rounded-lg text-center transition-all text-slate-400 hover:bg-slate-800">
+        拼句測驗
+      </button>
+      <button data-action="navigate" data-target="addWord" id="nav-addWord" class="flex-1 min-w-[70px] py-2 rounded-lg text-center transition-all text-slate-400 hover:bg-slate-800">
+        新增單字
+      </button>
+      <button data-action="navigate" data-target="settings" id="nav-settings" class="flex-1 min-w-[70px] py-2 rounded-lg text-center transition-all text-slate-400 hover:bg-slate-800">
+        設定
+      </button>
+    </nav>
+
+    <!-- 主內容呈現區 -->
+    <main id="viewContainer" class="flex-1 overflow-y-auto no-scrollbar p-4 flex flex-col"></main>
+
+  </div>
+
+  <script>
+    /**
+     * =========================================================================
+     * 0. 企業級安全防禦模組 (Security Guard & Sanitizer)
+     * =========================================================================
+     */
+    const Security = {
+      // 嚴格轉義 HTML 實體，防禦所有動態文字輸出型 XSS
+      escape(str) {
+        if (str === null || str === undefined) return '';
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      },
+
+      // 引入 DOMPurify 進行專業級 AST 白名單過濾，防禦 Mutation XSS
+      sanitizeRuby(htmlStr) {
+        if (!htmlStr) return '';
+        if (typeof DOMPurify !== 'undefined' && DOMPurify.sanitize) {
+          return DOMPurify.sanitize(htmlStr, {
+            ALLOWED_TAGS: ['ruby', 'rt', 'rp'],
+            ALLOWED_ATTR: []
+          });
+        }
+        // 離線安全字串轉義，保留合法 ruby/rt 標籤
+        return String(htmlStr)
+          .replace(/<(?!\/?(ruby|rt|rp)\b)[^>]*>/gi, '')
+          .replace(/<(ruby|rt|rp)\s+[^>]*>/gi, '<$1>');
+      },
+
+      safeJsonParse(raw, fallback) {
+        try {
+          return raw ? JSON.parse(raw) : fallback;
+        } catch(e) {
+          console.warn('[Security] 本機快取格式異常，已安全重置', e);
+          return fallback;
+        }
+      }
+    };
+
+    /**
+     * =========================================================================
+     * 0.1 日語平假名振假名智慧排版引擎 (Kana & Ruby Alignment Engine)
+     * 將讀音自動轉為道地平假名，並與漢字完美對齊標註，徹底避免羅馬字充當假名
+     * =========================================================================
+     */
+    const KanaHelper = {
+      romajiMap: [
+        ['tchi', 'っち'], ['ttsu', 'っつ'],
+        ['kya', 'きゃ'], ['kyu', 'きゅ'], ['kyo', 'きょ'],
+        ['sha', 'しゃ'], ['shu', 'しゅ'], ['sho', 'しょ'],
+        ['cha', 'ちゃ'], ['chu', 'ちゅ'], ['cho', 'ちょ'],
+        ['nya', 'にゃ'], ['nyu', 'にゅ'], ['nyo', 'にょ'],
+        ['hya', 'ひゃ'], ['hyu', 'ひゅ'], ['hyo', 'ひょ'],
+        ['mya', 'みゃ'], ['myu', 'みゅ'], ['myo', 'みょ'],
+        ['rya', 'りゃ'], ['ryu', 'りゅ'], ['ryo', 'りょ'],
+        ['gya', 'ぎゃ'], ['gyu', 'ぎゅ'], ['gyo', 'ぎょ'],
+        ['bya', 'びゃ'], ['byu', 'びゅ'], ['byo', 'びょ'],
+        ['pya', 'ぴゃ'], ['pyu', 'ぴゅ'], ['pyo', 'ぴょ'],
+        ['tsu', 'つ'], ['shi', 'し'], ['chi', 'ち'],
+        ['ka', 'か'], ['ki', 'き'], ['ku', 'く'], ['ke', 'け'], ['ko', 'こ'],
+        ['sa', 'さ'], ['si', 'し'], ['su', 'す'], ['se', 'せ'], ['so', 'そ'],
+        ['ta', 'た'], ['ti', 'ち'], ['tu', 'つ'], ['te', 'て'], ['to', 'と'],
+        ['na', 'な'], ['ni', 'に'], ['nu', 'ぬ'], ['ne', 'ね'], ['no', 'の'],
+        ['ha', 'は'], ['hi', 'ひ'], ['fu', 'ふ'], ['he', 'へ'], ['ho', 'ほ'],
+        ['ma', 'ま'], ['mi', 'み'], ['mu', 'む'], ['me', 'め'], ['mo', 'も'],
+        ['ya', 'や'], ['yu', 'ゆ'], ['yo', 'よ'],
+        ['ra', 'ら'], ['ri', 'り'], ['ru', 'る'], ['re', 'れ'], ['ro', 'ろ'],
+        ['wa', 'わ'], ['wo', 'を'],
+        ['ga', 'が'], ['gi', 'ぎ'], ['gu', 'ぐ'], ['ge', 'げ'], ['go', 'ご'],
+        ['za', 'ざ'], ['ji', 'じ'], ['zu', 'ず'], ['ze', 'ぜ'], ['zo', 'ぞ'],
+        ['da', 'だ'], ['di', 'ぢ'], ['du', 'づ'], ['de', 'で'], ['do', 'ど'],
+        ['ba', 'ば'], ['bi', 'び'], ['bu', 'ぶ'], ['be', 'べ'], ['bo', 'ぼ'],
+        ['pa', 'ぱ'], ['pi', 'ぴ'], ['pu', 'ぷ'], ['pe', 'ぺ'], ['po', 'ぽ'],
+        ['ja', 'じゃ'], ['ju', 'じゅ'], ['jo', 'じょ'],
+        ['a', 'あ'], ['i', 'い'], ['u', 'う'], ['e', 'え'], ['o', 'お'],
+        ['n', 'ん']
+      ],
+
+      toHiragana(romaji) {
+        if (!romaji) return '';
+        // 若本身已包含假名，直接回傳
+        if (/[\u3040-\u309f\u30a0-\u30ff]/.test(romaji)) return romaji;
+        let text = romaji.toLowerCase().trim();
+        let res = '';
+        let i = 0;
+        while (i < text.length) {
+          if (i + 1 < text.length && text[i] === text[i+1] && 'kstpcf'.includes(text[i])) {
+            res += 'っ';
+            i += 1;
+            continue;
+          }
+          let matched = false;
+          for (const [rom, hir] of this.romajiMap) {
+            if (text.startsWith(rom, i)) {
+              res += hir;
+              i += rom.length;
+              matched = true;
+              break;
+            }
+          }
+          if (!matched) {
+            res += text[i];
+            i += 1;
+          }
+        }
+        return res;
+      },
+
+      buildRuby(kanjiWord, phoneticStr) {
+        if (!kanjiWord) return '';
+        if (kanjiWord.includes('<ruby>')) return kanjiWord;
+        
+        const hasKanji = /[\u4e00-\u9fa5]/.test(kanjiWord);
+        if (!hasKanji) return kanjiWord;
+
+        if (!phoneticStr) return kanjiWord;
+        const cleanPhonetic = phoneticStr.split('(')[0].replace(/原形.*?/g, '').replace(/常體.*?/g, '').trim();
+        const hiragana = this.toHiragana(cleanPhonetic).replace(/\s+/g, '');
+
+        if (!hiragana) return kanjiWord;
+
+        const kw = kanjiWord.replace(/\s+/g, '');
+        let suffixLen = 0;
+        while (suffixLen < kw.length && 
+               suffixLen < hiragana.length && 
+               kw[kw.length - 1 - suffixLen] === hiragana[hiragana.length - 1 - suffixLen] &&
+               !/[\u4e00-\u9fa5]/.test(kw[kw.length - 1 - suffixLen])) {
+          suffixLen++;
+        }
+
+        let prefixLen = 0;
+        while (prefixLen < (kw.length - suffixLen) && 
+               prefixLen < (hiragana.length - suffixLen) && 
+               kw[prefixLen] === hiragana[prefixLen] &&
+               !/[\u4e00-\u9fa5]/.test(kw[prefixLen])) {
+          prefixLen++;
+        }
+
+        const prefix = kw.slice(0, prefixLen);
+        const suffix = suffixLen > 0 ? kw.slice(kw.length - suffixLen) : '';
+        const kanjiPart = kw.slice(prefixLen, suffixLen > 0 ? kw.length - suffixLen : kw.length);
+        const rtPart = hiragana.slice(prefixLen, suffixLen > 0 ? hiragana.length - suffixLen : hiragana.length);
+
+        if (kanjiPart && rtPart) {
+          return `${prefix}<ruby>${kanjiPart}<rt>${rtPart}</rt></ruby>${suffix}`;
+        }
+        return `<ruby>${kw}<rt>${hiragana}</rt></ruby>`;
+      }
+    };
+
+
+    /**
+     * 1. 語言設定
+     */
+    const PRESET_LANGUAGES = [
+      { code: 'ja', name: '日本語 (日文)', ttsLang: 'ja-JP', flag: '🇯🇵', phoneticLabel: '羅馬字 / 振假名', placeholder: '日文單字/例句...' },
+      { code: 'es', name: 'Español (西文)', ttsLang: 'es-ES', flag: '🇪🇸', phoneticLabel: '音節 / 重音標註', placeholder: '西文單字/例句...' },
+      { code: 'fr', name: 'Français (法文)', ttsLang: 'fr-FR', flag: '🇫🇷', phoneticLabel: '國際音標 (IPA)', placeholder: '法文單字/例句...' },
+      { code: 'de', name: 'Deutsch (德文)', ttsLang: 'de-DE', flag: '🇩🇪', phoneticLabel: '發音 / 音標', placeholder: '德文單字/例句...' },
+      { code: 'ko', name: '한국어 (韓文)', ttsLang: 'ko-KR', flag: '🇰🇷', phoneticLabel: '羅馬拼音', placeholder: '韓文單字/例句...' }
+    ];
+
+    const INITIAL_VOCABULARY = [
+      {
+        id: "w_001",
+        category: "生活物品",
+        pos: "名詞",
+        baseWord: "book",
+        meaningZh: "書本",
+        targets: { ja: "本", es: "el libro" },
+        ruby: { ja: "<ruby>本<rt>ほん</rt></ruby>" },
+        phonetics: { ja: "hon", es: "el li-bro" },
+        meta: "陽性名詞 (el)"
+      },
+      {
+        id: "w_002",
+        category: "生活物品",
+        pos: "名詞",
+        baseWord: "table",
+        meaningZh: "桌子",
+        targets: { ja: "机", es: "la mesa" },
+        ruby: { ja: "<ruby>机<rt>つくえ</rt></ruby>" },
+        phonetics: { ja: "tsukue", es: "la me-sa" },
+        meta: "陰性名詞 (la)"
+      },
+      {
+        id: "w_003",
+        category: "日常動作",
+        pos: "動詞",
+        baseWord: "to eat",
+        meaningZh: "吃",
+        targets: { ja: "食べます", es: "comer" },
+        ruby: { ja: "<ruby>食<rt>た</rt></ruby>べます" },
+        ja_plain: "食べる",
+        ja_plain_ruby: "<ruby>食<rt>た</rt></ruby>べる",
+        phonetics: { ja: "tabemasu", es: "ko-mer" },
+        meta: "動詞・禮貌/常體雙軌"
+      }
+    ];
+
+    const INITIAL_SENTENCES = [
+      {
+        id: "s_001",
+        category: "日常問候",
+        prompt_zh: "{greeting}，很高興見到你。",
+        en_target: "{greeting}, nice to meet you.",
+        ja_target: "{greeting}、はじめまして。",
+        ja_ruby: "{greeting}、はじめまして。",
+        ja_plain: "{greeting}、よろしくね。",
+        ja_plain_ruby: "{greeting}、よろしくね。",
+        es_target: "{greeting}, mucho gusto.",
+        hints: "[問候語] [很高興見到你]",
+        ja_grammar: "「はじめまして」為初次見面標準禮貌用語；朋友口語常簡化為「よろしくね」。",
+        es_grammar: "Mucho gusto 意為「很高興認識你」，為固定短語，性數不隨性別改變。",
+        variants: [
+          { zh: "早安", en: "Good morning", ja: "おはようございます", ja_plain: "おはよう", es: "Buenos días" },
+          { zh: "午安", en: "Good afternoon", ja: "こんにちは", ja_plain: "こんにちは", es: "Buenas tardes" },
+          { zh: "晚安", en: "Good evening", ja: "こんばんは", ja_plain: "こんばんは", es: "Buenas noches" }
+        ]
+      },
+      {
+        id: "s_002",
+        category: "餐飲點餐",
+        prompt_zh: "請給我{item}，謝謝你。",
+        en_target: "{item}, please, thank you.",
+        ja_target: "{item}をお願いします、ありがとうございます。",
+        ja_ruby: "{item}をお<ruby>願<rt>ねが</rt></ruby>いします、ありがとうございます。",
+        ja_plain: "{item}ちょうだい、ありがとう。",
+        ja_plain_ruby: "{item}ちょうだい、ありがとう。",
+        es_target: "{item}, por favor, muchas gracias.",
+        hints: "[飲品] [請給我] [謝謝]",
+        ja_grammar: "「〜をお願いします」為禮貌請求句型；朋友日常口語常用「〜ちょうだい」或「〜頼む」。",
+        es_grammar: "Por favor (請) 放句首或句末皆可；點餐時名詞常省略或搭配不定冠詞。",
+        variants: [
+          { zh: "水", en: "Water", ja: "お水", ja_plain: "水", es: "Agua" },
+          { zh: "茶", en: "Tea", ja: "お茶", ja_plain: "お茶", es: "Té" },
+          { zh: "咖啡", en: "Coffee", ja: "コーヒー", ja_plain: "コーヒー", es: "Café" }
+        ]
+      }
+    ];
+
+    /**
+     * 2. SM-2 間隔重複演算法
+     */
+    const SM2 = {
+      DEFAULT_EF: 2.5,
+      MIN_EF: 1.3,
+      calculate(itemState = {}, quality) {
+        let repetitions = itemState.repetitions || 0;
+        let interval = itemState.interval || 0;
+        let ef = itemState.ef || this.DEFAULT_EF;
+
+        if (quality >= 3) {
+          if (repetitions === 0) interval = 1;
+          else if (repetitions === 1) interval = 6;
+          else interval = Math.round(interval * ef);
+          repetitions += 1;
+        } else {
+          repetitions = 0;
+          interval = 1;
+        }
+
+        ef = ef + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
+        if (ef < this.MIN_EF) ef = this.MIN_EF;
+
+        const nextDate = new Date();
+        nextDate.setDate(nextDate.getDate() + interval);
+
+        return {
+          repetitions,
+          interval,
+          ef: parseFloat(ef.toFixed(2)),
+          nextReviewDate: nextDate.toISOString(),
+          lastReviewed: new Date().toISOString(),
+          lastQuality: quality
+        };
+      }
+    };
+
+    /**
+     * 3. 本地儲存層 (支援安全 Session 暫存與 GAS Token 驗證)
+     */
+    const Storage = {
+      KEY_VOCAB: 'polyglot_vocab_data_v4',
+      KEY_SENTENCES: 'polyglot_sentences_v2',
+      KEY_SRS: 'polyglot_srs_records_v3',
+      KEY_GAS_URL: 'polyglot_gas_url',
+      KEY_GAS_TOKEN: 'polyglot_gas_token',
+      KEY_GEMINI_KEY: 'polyglot_gemini_key',
+      KEY_KEY_STORAGE_MODE: 'polyglot_key_storage_mode',
+      KEY_CATEGORIES: 'polyglot_categories',
+      KEY_TEST_MODE: 'polyglot_test_mode',
+      KEY_TEST_IDS: 'polyglot_test_word_ids',
+      KEY_VOLUMES: 'polyglot_tts_volumes',
+      KEY_USER_LANGS: 'polyglot_user_languages',
+      KEY_ACTIVE_LANGS: 'polyglot_active_languages',
+      KEY_AI_ENABLED: 'polyglot_ai_autofill_enabled',
+      KEY_SMART_GUIDANCE: 'polyglot_smart_guidance_enabled',
+      KEY_SHOW_FURIGANA: 'polyglot_show_furigana',
+      KEY_SHOW_ES_GENDER: 'polyglot_show_es_gender',
+
+      srsPendingCount: 0,
+
+      getKeyStorageMode() {
+        return localStorage.getItem(this.KEY_KEY_STORAGE_MODE) || 'local';
+      },
+      setKeyStorageMode(mode) {
+        localStorage.setItem(this.KEY_KEY_STORAGE_MODE, mode);
+      },
+      getGeminiKey() {
+        const mode = this.getKeyStorageMode();
+        if (mode === 'session') {
+          return sessionStorage.getItem(this.KEY_GEMINI_KEY) || '';
+        }
+        return localStorage.getItem(this.KEY_GEMINI_KEY) || '';
+      },
+      setGeminiKey(key) {
+        const mode = this.getKeyStorageMode();
+        if (mode === 'session') {
+          sessionStorage.setItem(this.KEY_GEMINI_KEY, key.trim());
+          localStorage.removeItem(this.KEY_GEMINI_KEY);
+        } else {
+          localStorage.setItem(this.KEY_GEMINI_KEY, key.trim());
+          sessionStorage.removeItem(this.KEY_GEMINI_KEY);
+        }
+      },
+
+      getGasToken() {
+        return localStorage.getItem(this.KEY_GAS_TOKEN) || '';
+      },
+      setGasToken(token) {
+        localStorage.setItem(this.KEY_GAS_TOKEN, token.trim());
+      },
+
+      isAiEnabled() {
+        const val = localStorage.getItem(this.KEY_AI_ENABLED);
+        return val === null ? true : val === 'true';
+      },
+      setAiEnabled(enabled) {
+        localStorage.setItem(this.KEY_AI_ENABLED, enabled ? 'true' : 'false');
+      },
+
+      isSmartGuidanceEnabled() {
+        const val = localStorage.getItem(this.KEY_SMART_GUIDANCE);
+        return val === null ? true : val === 'true';
+      },
+      setSmartGuidanceEnabled(enabled) {
+        localStorage.setItem(this.KEY_SMART_GUIDANCE, enabled ? 'true' : 'false');
+      },
+
+      isFuriganaEnabled() {
+        const val = localStorage.getItem(this.KEY_SHOW_FURIGANA);
+        return val === null ? true : val === 'true';
+      },
+      setFuriganaEnabled(enabled) {
+        localStorage.setItem(this.KEY_SHOW_FURIGANA, enabled ? 'true' : 'false');
+      },
+
+      isEsGenderEnabled() {
+        const val = localStorage.getItem(this.KEY_SHOW_ES_GENDER);
+        return val === null ? true : val === 'true';
+      },
+      setEsGenderEnabled(enabled) {
+        localStorage.setItem(this.KEY_SHOW_ES_GENDER, enabled ? 'true' : 'false');
+      },
+
+      getSentences() {
+        return Security.safeJsonParse(localStorage.getItem(this.KEY_SENTENCES), INITIAL_SENTENCES);
+      },
+      setSentences(list) {
+        localStorage.setItem(this.KEY_SENTENCES, JSON.stringify(list));
+      },
+
+      getUserLangs() {
+        return Security.safeJsonParse(localStorage.getItem(this.KEY_USER_LANGS), PRESET_LANGUAGES.slice(0, 2));
+      },
+      addUserLang(langObj) {
+        const list = this.getUserLangs();
+        if (!list.some(l => l.code === langObj.code)) {
+          list.push(langObj);
+          localStorage.setItem(this.KEY_USER_LANGS, JSON.stringify(list));
+          this.activateLang(langObj.code);
+        }
+      },
+      removeUserLang(code) {
+        let list = this.getUserLangs();
+        if (list.length <= 1) return alert('至少需保留一種語言！');
+        list = list.filter(l => l.code !== code);
+        localStorage.setItem(this.KEY_USER_LANGS, JSON.stringify(list));
+        let active = this.getActiveLangs().filter(c => c !== code);
+        localStorage.setItem(this.KEY_ACTIVE_LANGS, JSON.stringify(active));
+      },
+
+      getActiveLangs() {
+        return Security.safeJsonParse(localStorage.getItem(this.KEY_ACTIVE_LANGS), this.getUserLangs().map(l => l.code));
+      },
+      isLangActive(code) {
+        return this.getActiveLangs().includes(code);
+      },
+      toggleLangActive(code) {
+        let active = this.getActiveLangs();
+        if (active.includes(code)) {
+          if (active.length <= 1) return alert('至少需啟動一種語言！');
+          active = active.filter(c => c !== code);
+        } else {
+          active.push(code);
+        }
+        localStorage.setItem(this.KEY_ACTIVE_LANGS, JSON.stringify(active));
+      },
+      activateLang(code) {
+        const active = this.getActiveLangs();
+        if (!active.includes(code)) {
+          active.push(code);
+          localStorage.setItem(this.KEY_ACTIVE_LANGS, JSON.stringify(active));
+        }
+      },
+
+      getVocab() {
+        return Security.safeJsonParse(localStorage.getItem(this.KEY_VOCAB), INITIAL_VOCABULARY);
+      },
+      setVocab(list) { localStorage.setItem(this.KEY_VOCAB, JSON.stringify(list)); },
+      addWord(wordObj) {
+        const vocab = this.getVocab();
+        vocab.unshift(wordObj);
+        this.setVocab(vocab);
+        if (this.isTestMode()) {
+          const testIds = this.getTestIds();
+          testIds.push(wordObj.id);
+          localStorage.setItem(this.KEY_TEST_IDS, JSON.stringify(testIds));
+        }
+      },
+
+      isTestMode() { return localStorage.getItem(this.KEY_TEST_MODE) === 'true'; },
+      setTestMode(val) {
+        localStorage.setItem(this.KEY_TEST_MODE, val ? 'true' : 'false');
+        this.updateTestBanner();
+      },
+      getTestIds() {
+        return Security.safeJsonParse(localStorage.getItem(this.KEY_TEST_IDS), []);
+      },
+      updateTestBanner() {
+        const banner = document.getElementById('testBanner');
+        if (banner) {
+          banner.className = this.isTestMode() ? 'bg-amber-500 text-slate-950 font-bold px-4 py-1.5 text-xs text-center flex items-center justify-between z-30' : 'hidden';
+        }
+      },
+      async clearTestModeData() {
+        if (!confirm('確定要結束測試模式，並將測試期間的所有單字自本地與 Google 試算表刪除嗎？')) return;
+        const testIds = this.getTestIds();
+        let vocab = this.getVocab().filter(w => !testIds.includes(w.id));
+        this.setVocab(vocab);
+        localStorage.removeItem(this.KEY_TEST_IDS);
+        this.setTestMode(false);
+
+        const gasUrl = this.getGasUrl();
+        if (gasUrl && testIds.length > 0) {
+          try {
+            await fetch(gasUrl, {
+              method: 'POST',
+              body: JSON.stringify({ action: 'deleteTestWords', testIds: testIds, token: this.getGasToken() })
+            });
+            alert('已成功清除測試單字！');
+          } catch(e) {
+            alert('本地已清除，但雲端刪除失敗。');
+          }
+        }
+        router.updateStats();
+        router.refresh();
+      },
+
+      getVolume(code) {
+        const map = Security.safeJsonParse(localStorage.getItem(this.KEY_VOLUMES), {});
+        return map[code] !== undefined ? map[code] : 1;
+      },
+      setVolume(code, val) {
+        const map = Security.safeJsonParse(localStorage.getItem(this.KEY_VOLUMES), {});
+        map[code] = parseFloat(val);
+        localStorage.setItem(this.KEY_VOLUMES, JSON.stringify(map));
+      },
+
+      getCategories() {
+        return Security.safeJsonParse(localStorage.getItem(this.KEY_CATEGORIES), ["日常問候", "餐飲點餐", "社交場所", "職場商業", "旅遊會話"]);
+      },
+      addCategory(cat) {
+        if (!cat) return;
+        const cats = this.getCategories();
+        if (!cats.includes(cat)) {
+          cats.push(cat);
+          localStorage.setItem(this.KEY_CATEGORIES, JSON.stringify(cats));
+        }
+      },
+
+      getSrsRecords() {
+        return Security.safeJsonParse(localStorage.getItem(this.KEY_SRS), {});
+      },
+      getLangSrs(wordId, langCode) {
+        return this.getSrsRecords()[`${wordId}_${langCode}`] || null;
+      },
+      saveLangSrs(wordId, langCode, quality) {
+        const records = this.getSrsRecords();
+        const key = `${wordId}_${langCode}`;
+        records[key] = SM2.calculate(records[key], quality);
+        localStorage.setItem(this.KEY_SRS, JSON.stringify(records));
+
+        this.srsPendingCount++;
+        if (this.srsPendingCount >= 5) {
+          this.syncSrsToCloudSilently();
+          this.srsPendingCount = 0;
+        }
+        return records[key];
+      },
+      async syncSrsToCloudSilently() {
+        const gasUrl = this.getGasUrl();
+        if (!gasUrl) return;
+        try {
+          fetch(gasUrl, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'syncSrs', srsRecords: this.getSrsRecords(), token: this.getGasToken() })
+          });
+        } catch(e) {}
+      },
+
+      getGasUrl() { return localStorage.getItem(this.KEY_GAS_URL) || ''; },
+      setGasUrl(url) { localStorage.setItem(this.KEY_GAS_URL, url.trim()); }
+    };
+
+    /**
+     * 4. 語音朗讀模組
+     */
+    const TTS = {
+      speak(text, langCode) {
+        if (!('speechSynthesis' in window) || !text) return;
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        if (langCode === 'en') {
+          utterance.lang = 'en-US';
+        } else {
+          const userLangs = Storage.getUserLangs();
+          const langMeta = userLangs.find(l => l.code === langCode);
+          if (langMeta) utterance.lang = langMeta.ttsLang;
+        }
+        utterance.rate = 0.9;
+        utterance.volume = Storage.getVolume(langCode);
+        window.speechSynthesis.speak(utterance);
+      }
+    };
+
+    /**
+     * 5. Gemini AI 自動辨識模組
+     */
+    const AIHelper = {
+      async fillMissingFields(existingData, targetLanguages) {
+        const apiKey = Storage.getGeminiKey();
+        if (!apiKey) throw new Error("請先在「設定」填入 Gemini API Key！");
+
+        const langs = targetLanguages || Storage.getUserLangs();
+        const existingCats = Storage.getCategories().join(', ');
+        
+        const langTargetsPrompt = langs.map(l => 
+          `"${l.code}": { "translation": "${l.name}標準翻譯", "phonetic": "${l.phoneticLabel}", "ruby": "若是日文請提供包含漢字與振假名的HTML ruby格式(例如 <ruby>図<rt>と</rt>書<rt>しょ</rt>館<rt>かん</rt></ruby>)，其他語言可與translation相同" }`
+        ).join(', ');
+
+        const systemPrompt = `You are a professional polyglot lexicographer.
+The user provides partial vocabulary in ANY language (English, Traditional Chinese, Japanese, Spanish, etc.).
+Important Instructions:
+1. TYPO CORRECTION: If the user made a typo/misspelling, automatically correct it to the canonical form.
+2. PART OF SPEECH (pos): Deduce the primary part of speech in Traditional Chinese (e.g. "名詞", "動詞", "形容詞", "副詞", "感嘆詞", "慣用短語").
+3. SPANISH ARTICLES: For Spanish nouns, ALWAYS include the definite article ('el' for masculine, 'la' for feminine, 'los'/'las' for plural).
+4. JAPANESE BEGINNER-FRIENDLY FORMS: Provide the standard polite form (丁寧體) as translation, and if verb/adjective, mention plain dictionary form (朋友說法/原形) in phonetic.
+5. JAPANESE FURIGANA: If Kanji exists, ALWAYS provide the "ruby" field with valid HTML <ruby> and <rt> tags.
+6. Return ONLY valid JSON matching this schema:
+
+Schema:
+{
+  "baseWord": "Corrected English word",
+  "meaningZh": "繁體中文釋義",
+  "category": "繁體中文主題分類 (choose from [${existingCats}] or suggest a new one)",
+  "pos": "詞性 (如: 名詞/動詞/形容詞)",
+  "targets": {
+    ${langTargetsPrompt}
+  }
+}`;
+
+        const requestBody = {
+          contents: [{
+            role: "user",
+            parts: [{ text: `${systemPrompt}
+
+User input fields:
+${JSON.stringify(existingData, null, 2)}` }]
+          }],
+          generationConfig: {
+            temperature: 0.1,
+            responseMimeType: "application/json"
+          }
+        };
+
+        async function fetchWithRetry(retries = 2, delayMs = 1500) {
+          for (let attempt = 0; attempt <= retries; attempt++) {
+            try {
+              const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody)
+              });
+
+              if ((res.status === 503 || res.status === 429) && attempt < retries) {
+                await new Promise(r => setTimeout(r, delayMs));
+                delayMs *= 1.5;
+                continue;
+              }
+
+              if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.error?.message || `API 請求失敗 (${res.status})`);
+              }
+
+              return await res.json();
+            } catch (err) {
+              if (attempt >= retries) throw err;
+              await new Promise(r => setTimeout(r, delayMs));
+            }
+          }
+        }
+
+        const data = await fetchWithRetry();
+        const jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!jsonText) throw new Error("AI 未回傳有效結果");
+
+        return JSON.parse(jsonText);
+      }
+    };
+
+    /**
+     * 6. 通用過濾器
+     */
+    function filterVocabulary(vocabList, selectedCategory, selectedMastery, targetLangCode) {
+      return vocabList.filter(word => {
+        if (selectedCategory !== 'ALL' && word.category !== selectedCategory) return false;
+
+        if (selectedMastery !== 'ALL') {
+          const srs = Storage.getLangSrs(word.id, targetLangCode || 'en');
+          const now = new Date();
+
+          if (selectedMastery === 'NEW') {
+            if (srs) return false;
+          } else if (selectedMastery === 'DUE') {
+            if (!srs) return true;
+            const isExpired = new Date(srs.nextReviewDate) <= now;
+            const isForgotten = (srs.lastQuality !== undefined && srs.lastQuality < 3);
+            if (!isExpired && !isForgotten) return false;
+          } else if (selectedMastery === 'LEARNING') {
+            if (!srs || srs.interval > 6) return false;
+          } else if (selectedMastery === 'MASTERED') {
+            if (!srs || srs.interval <= 6) return false;
+          }
+        }
+
+        return true;
+      });
+    }
+
+    /**
+     * 7. 視圖控制器 (宣告式 data-action 架構，0 個 inline 事件)
+     */
+
+    // --- 視圖 A: 字卡對照 ---
+    const FlashcardView = {
+      currentIndex: 0,
+      filterCategory: 'ALL',
+      filterMastery: 'ALL',
+      revealedState: {},
+      revealedZh: false,
+      showPhonetics: true,
+
+      render() {
+        const allVocab = Storage.getVocab();
+        const categories = Storage.getCategories();
+        const activeLangs = Storage.getUserLangs().filter(l => Storage.isLangActive(l.code));
+        const primaryLangCode = activeLangs[0]?.code || 'ja';
+
+        const filteredVocab = filterVocabulary(allVocab, this.filterCategory, this.filterMastery, primaryLangCode);
+
+        const filterBarHtml = `
+          <div class="flex items-center gap-2 mb-3 bg-slate-950/70 p-2 rounded-xl border border-slate-800 text-xs">
+            <select data-change="flashcard-category" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-white">
+              <option value="ALL" ${this.filterCategory === 'ALL' ? 'selected' : ''}>📁 全部分類</option>
+              ${categories.map(c => `<option value="${Security.escape(c)}" ${this.filterCategory === c ? 'selected' : ''}>${Security.escape(c)}</option>`).join('')}
+            </select>
+            <select data-change="flashcard-mastery" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-white">
+              <option value="ALL" ${this.filterMastery === 'ALL' ? 'selected' : ''}>🎯 全部熟練度</option>
+              <option value="DUE" ${this.filterMastery === 'DUE' ? 'selected' : ''}>⚠️ 今日待複習</option>
+              <option value="NEW" ${this.filterMastery === 'NEW' ? 'selected' : ''}>🌱 尚未評級</option>
+              <option value="LEARNING" ${this.filterMastery === 'LEARNING' ? 'selected' : ''}>📖 學習中 (1~6天)</option>
+              <option value="MASTERED" ${this.filterMastery === 'MASTERED' ? 'selected' : ''}>🌟 已熟記 (>6天)</option>
+            </select>
+          </div>
+        `;
+
+        if (filteredVocab.length === 0) {
+          return `
+            <div class="flex-1 flex flex-col justify-between">
+              ${filterBarHtml}
+              <div class="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-3">
+                <span class="text-4xl">🍃</span>
+                <p class="text-slate-400 text-sm">此篩選條件下沒有相符的單字！</p>
+                <button data-action="flashcard-reset-filter" class="px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-indigo-300">清除篩選條件</button>
+              </div>
+            </div>
+          `;
+        }
+
+        if (this.currentIndex >= filteredVocab.length) this.currentIndex = 0;
+        const word = filteredVocab[this.currentIndex];
+        const enSrs = Storage.getLangSrs(word.id, 'en');
+
+        const targetCardsHtml = activeLangs.map(lang => {
+          const targetWord = (word.targets && word.targets[lang.code]) || '—';
+          const phonetic = (word.phonetics && word.phonetics[lang.code]) || '';
+          const isRevealed = !!this.revealedState[lang.code];
+          const srsState = Storage.getLangSrs(word.id, lang.code);
+
+          // 1. 西班牙文性別判定與按鈕/色彩
+          let genderBadge = '';
+          let cardBorderClass = 'border-slate-700/70';
+          const isEsEnabled = Storage.isEsGenderEnabled();
+
+          if (lang.code === 'es') {
+            const cleanTarget = (targetWord || '').toLowerCase().trim();
+            const metaInfo = ((word.meta || '') + ' ' + (word.targets?.meta || '') + ' ' + (word.category || '')).toLowerCase();
+
+            let detectedGender = '';
+            if (cleanTarget.startsWith('el ') || cleanTarget.startsWith('los ') || metaInfo.includes('陽') || metaInfo.includes('(el)') || cleanTarget.endsWith('o')) {
+              detectedGender = 'masc';
+            } else if (cleanTarget.startsWith('la ') || cleanTarget.startsWith('las ') || metaInfo.includes('陰') || metaInfo.includes('(la)') || cleanTarget.endsWith('a')) {
+              detectedGender = 'fem';
+            } else if (metaInfo.includes('動詞') || cleanTarget.endsWith('er') || cleanTarget.endsWith('ir') || cleanTarget.endsWith('ar')) {
+              detectedGender = 'verb';
+            }
+
+            if (isEsEnabled) {
+              if (detectedGender === 'masc') {
+                genderBadge = '<span class="bg-blue-900/80 text-blue-200 border border-blue-400/50 text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm shadow-blue-500/20">♂ 陽性 (el)</span>';
+                cardBorderClass = 'border-blue-500/60 bg-blue-950/20 shadow-md shadow-blue-950/40';
+              } else if (detectedGender === 'fem') {
+                genderBadge = '<span class="bg-pink-900/80 text-pink-200 border border-pink-400/50 text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm shadow-pink-500/20">♀ 陰性 (la)</span>';
+                cardBorderClass = 'border-pink-500/60 bg-pink-950/20 shadow-md shadow-pink-950/40';
+              } else if (detectedGender === 'verb') {
+                genderBadge = '<span class="bg-amber-950/80 text-amber-300 border border-amber-500/40 text-[10px] px-2 py-0.5 rounded-full font-medium">⚡ 動詞</span>';
+                cardBorderClass = 'border-amber-500/40 bg-amber-950/10 shadow-sm shadow-amber-950/30';
+              }
+            }
+          }
+
+          // 2. 日文振假名建構 (保證 100% 呈現道地平假名振假名)
+          let displayRuby = targetWord;
+          const isFuriganaEnabled = Storage.isFuriganaEnabled();
+
+          if (lang.code === 'ja') {
+            const rawRuby = (word.ruby && word.ruby.ja) || '';
+            if (rawRuby && rawRuby.includes('<ruby>')) {
+              displayRuby = rawRuby;
+            } else {
+              // 透過 KanaHelper 將讀音轉為道地平假名並對齊漢字
+              displayRuby = KanaHelper.buildRuby(targetWord, phonetic);
+            }
+
+            // 開關控制：若關閉則徹底抹除 <rt> 與 <ruby>，純顯漢字
+            if (!isFuriganaEnabled) {
+              displayRuby = displayRuby.replace(/<rt>.*?<\/rt>/g, '').replace(/<\/?ruby>/g, '');
+            }
+          }
+
+          // 標題控制列按鈕 (讓使用者在卡片標題處直接點擊切換，給予最直接反饋)
+          let headerActionBtn = '';
+          if (lang.code === 'ja') {
+            headerActionBtn = `
+              <button data-action="toggle-furigana" class="px-2 py-0.5 rounded-full text-[10px] font-semibold transition-all border ${isFuriganaEnabled ? 'bg-indigo-950/90 text-indigo-300 border-indigo-500/50 shadow-sm' : 'bg-slate-800 text-slate-500 border-slate-700 hover:text-slate-300'}">
+                ${isFuriganaEnabled ? '🇯🇵 假名:開' : '🇯🇵 假名:關'}
+              </button>
+            `;
+          } else if (lang.code === 'es') {
+            headerActionBtn = `
+              <button data-action="toggle-es-gender" class="px-2 py-0.5 rounded-full text-[10px] font-semibold transition-all border ${isEsEnabled ? 'bg-pink-950/90 text-pink-300 border-pink-500/50 shadow-sm' : 'bg-slate-800 text-slate-500 border-slate-700 hover:text-slate-300'}">
+                ${isEsEnabled ? '🇪🇸 性別:開' : '🇪🇸 性別:關'}
+              </button>
+              ${genderBadge}
+            `;
+          }
+
+          return `
+            <div class="bg-slate-800/80 border ${cardBorderClass} rounded-xl p-3.5 transition-all">
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                    <span>${lang.flag}</span>
+                    <span>${Security.escape(lang.name)}</span>
+                  </span>
+                  ${headerActionBtn}
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-[11px] text-slate-400">
+                    ${srsState ? `間隔: ${srsState.interval}天` : '尚未評級'}
+                  </span>
+                  ${isRevealed ? `
+                    <button data-action="flashcard-toggle-target" data-lang="${Security.escape(lang.code)}" class="text-[11px] text-slate-400 hover:text-white px-1.5 py-0.5 rounded bg-slate-700/60">
+                      ▲ 收合
+                    </button>
+                  ` : ''}
+                </div>
+              </div>
+
+              ${!isRevealed ? `
+                <button data-action="flashcard-toggle-target" data-lang="${Security.escape(lang.code)}" 
+                  class="w-full py-3 bg-slate-700/50 hover:bg-slate-700 text-indigo-300 font-medium rounded-lg text-sm transition-colors border border-dashed border-slate-600 flex items-center justify-center gap-2">
+                  <span>🔍 點擊展開單字與發音</span>
+                </button>
+              ` : `
+                <div class="space-y-2">
+                  <div class="flex items-start justify-between">
+                    <div>
+                      <div class="text-xl font-bold text-white tracking-wide leading-relaxed">${Security.sanitizeRuby(displayRuby)}</div>
+                      ${(this.showPhonetics && phonetic) ? `
+                        <div class="text-xs text-indigo-400 font-mono mt-0.5 tracking-wider">🔤 ${Security.escape(phonetic)}</div>
+                      ` : ''}
+                    </div>
+                    <button data-action="speak" data-text="${Security.escape(targetWord)}" data-lang="${Security.escape(lang.code)}" 
+                      class="p-2 text-indigo-400 hover:text-indigo-300 bg-slate-700/50 rounded-lg text-base">
+                      🔊
+                    </button>
+                  </div>
+
+                  ${(lang.code === 'ja' && word.ja_plain) ? `
+                    <div class="text-xs text-amber-300/90 font-medium pt-0.5">
+                      🔶 朋友日常說法 (原形)：${Security.escape(word.ja_plain)}
+                    </div>
+                  ` : ''}
+
+                  <div class="pt-2 border-t border-slate-700/50">
+                    <div class="grid grid-cols-2 gap-2">
+                      <button data-action="flashcard-rate" data-lang="${Security.escape(lang.code)}" data-quality="1" class="py-1.5 text-xs bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 rounded-lg border border-rose-800/40 font-medium">
+                        ❌ 不記得 (重置)
+                      </button>
+                      <button data-action="flashcard-rate" data-lang="${Security.escape(lang.code)}" data-quality="4" class="py-1.5 text-xs bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-300 rounded-lg border border-emerald-800/40 font-medium">
+                        ✅ 記得 (推進)
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              `}
+            </div>
+          `;
+        }).join('');
+
+        return `
+          <div class="flex-1 flex flex-col justify-between space-y-3">
+            ${filterBarHtml}
+
+            <div class="bg-gradient-to-br from-indigo-950/70 to-slate-800 border border-indigo-500/30 rounded-2xl p-4 shadow-lg relative space-y-2.5">
+              <div class="flex justify-between items-center text-xs text-indigo-300">
+                <div class="flex items-center gap-1.5">
+                  <span class="font-semibold uppercase tracking-wider">${Security.escape(word.category || '通用')}</span>
+                  ${word.pos ? `<span class="bg-indigo-900/80 text-indigo-300 border border-indigo-500/40 px-1.5 py-0.5 rounded text-[10px] font-medium">${Security.escape(word.pos)}</span>` : ''}
+                </div>
+                <div class="flex items-center gap-2">
+                  <button data-action="toggle-es-gender" class="text-[10px] ${Storage.isEsGenderEnabled() ? 'text-pink-300' : 'text-slate-500'} hover:text-white underline">
+                    🇪🇸 性別:${Storage.isEsGenderEnabled() ? '開' : '關'}
+                  </button>
+                  <button data-action="toggle-furigana" class="text-[10px] ${Storage.isFuriganaEnabled() ? 'text-indigo-300' : 'text-slate-500'} hover:text-white underline">
+                    🇯🇵 假名:${Storage.isFuriganaEnabled() ? '開' : '關'}
+                  </button>
+                  <button data-action="toggle-phonetics" class="text-[10px] text-slate-400 hover:text-white underline">
+                    ${this.showPhonetics ? '讀音:開' : '讀音:關'}
+                  </button>
+                  <span class="text-slate-400 font-mono text-[11px]">${this.currentIndex + 1} / ${filteredVocab.length}</span>
+                </div>
+              </div>
+
+              <div class="text-center py-1">
+                <div class="flex items-center justify-center gap-2">
+                  <h2 class="text-2xl sm:text-3xl font-bold text-white tracking-wide">${Security.escape(word.baseWord)}</h2>
+                  <button data-action="speak" data-text="${Security.escape(word.baseWord)}" data-lang="en" class="text-indigo-400 hover:text-indigo-300 p-1 text-base">🔊</button>
+                </div>
+
+                <div class="mt-2">
+                  ${this.revealedZh ? `
+                    <div class="inline-block px-3 py-1 bg-amber-950/40 border border-amber-500/30 rounded-lg text-amber-200 text-xs font-medium">
+                      🇹🇼 中文：${Security.escape(word.meaningZh) || '（未記錄中文解釋）'}
+                    </div>
+                  ` : `
+                    <button data-action="flashcard-reveal-zh" class="px-3 py-1 bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs rounded-lg border border-slate-700 flex items-center gap-1.5 mx-auto transition-colors">
+                      <span>💡 揭露繁體中文意思</span>
+                    </button>
+                  `}
+                </div>
+              </div>
+
+              <div class="pt-2 border-t border-slate-700/60">
+                <div class="flex items-center justify-between text-[11px] mb-1">
+                  <span class="text-slate-400">🇬🇧 英文記憶度：${enSrs ? `間隔 ${enSrs.interval}天` : '尚未評估'}</span>
+                  ${(!enSrs || enSrs.lastQuality < 3) ? `<span class="text-rose-400 font-medium">需加強</span>` : `<span class="text-emerald-400">已熟悉</span>`}
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <button data-action="flashcard-rate" data-lang="en" data-quality="1" class="py-1.5 text-xs bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 rounded-lg border border-rose-800/40 font-medium">
+                    ❌ 不記得 (重置1天)
+                  </button>
+                  <button data-action="flashcard-rate" data-lang="en" data-quality="4" class="py-1.5 text-xs bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-300 rounded-lg border border-emerald-800/40 font-medium">
+                    ✅ 記得 (推進間隔)
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="space-y-2.5 flex-1 overflow-y-auto no-scrollbar">
+              ${targetCardsHtml}
+            </div>
+
+            <div class="flex items-center gap-3 pt-1">
+              <button data-action="flashcard-prev" data-len="${filteredVocab.length}" class="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-sm font-medium border border-slate-700">上一張</button>
+              <button data-action="flashcard-next" data-len="${filteredVocab.length}" class="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-indigo-600/30">下一張</button>
+            </div>
+          </div>
+        `;
+      },
+
+      changeCategory(c) { this.filterCategory = c; this.currentIndex = 0; router.refresh(); },
+      changeMastery(m) { this.filterMastery = m; this.currentIndex = 0; router.refresh(); },
+      resetFilter() { this.filterCategory = 'ALL'; this.filterMastery = 'ALL'; router.refresh(); },
+      revealZh() { this.revealedZh = true; router.refresh(); },
+      togglePhonetics() { this.showPhonetics = !this.showPhonetics; router.refresh(); },
+
+      toggleReveal(langCode) {
+        this.revealedState[langCode] = !this.revealedState[langCode];
+        if (this.revealedState[langCode]) {
+          const allVocab = Storage.getVocab();
+          const activeLangs = Storage.getUserLangs().filter(l => Storage.isLangActive(l.code));
+          const filtered = filterVocabulary(allVocab, this.filterCategory, this.filterMastery, activeLangs[0]?.code);
+          const word = filtered[this.currentIndex];
+          if (word && word.targets && word.targets[langCode]) TTS.speak(word.targets[langCode], langCode);
+        }
+        router.refresh();
+      },
+
+      rate(langCode, quality) {
+        const allVocab = Storage.getVocab();
+        const activeLangs = Storage.getUserLangs().filter(l => Storage.isLangActive(l.code));
+        const filtered = filterVocabulary(allVocab, this.filterCategory, this.filterMastery, activeLangs[0]?.code);
+        const word = filtered[this.currentIndex];
+        Storage.saveLangSrs(word.id, langCode, quality);
+        router.updateStats();
+        router.refresh();
+      },
+
+      next(len) {
+        this.currentIndex = (this.currentIndex + 1) % len;
+        this.revealedState = {};
+        this.revealedZh = false;
+        router.refresh();
+      },
+
+      prev(len) {
+        this.currentIndex = (this.currentIndex - 1 + len) % len;
+        this.revealedState = {};
+        this.revealedZh = false;
+        router.refresh();
+      }
+    };
+
+    // --- 視圖 B: 拼寫測驗 ---
+    const SpellingView = {
+      currentIndex: 0,
+      filterCategory: 'ALL',
+      filterMastery: 'ALL',
+      mode: 'readWrite',
+      activeLang: 'ja',
+      showHint: false,
+      results: {},
+
+      render() {
+        const allVocab = Storage.getVocab();
+        const categories = Storage.getCategories();
+        const activeLangs = Storage.getUserLangs().filter(l => Storage.isLangActive(l.code));
+
+        if (!Storage.isLangActive(this.activeLang) && activeLangs.length > 0) {
+          this.activeLang = activeLangs[0].code;
+        }
+
+        const filteredVocab = filterVocabulary(allVocab, this.filterCategory, this.filterMastery, this.activeLang);
+
+        const filterBarHtml = `
+          <div class="flex items-center gap-2 mb-2 bg-slate-950/70 p-2 rounded-xl border border-slate-800 text-xs">
+            <select data-change="spelling-category" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white">
+              <option value="ALL" ${this.filterCategory === 'ALL' ? 'selected' : ''}>📁 全部分類</option>
+              ${categories.map(c => `<option value="${Security.escape(c)}" ${this.filterCategory === c ? 'selected' : ''}>${Security.escape(c)}</option>`).join('')}
+            </select>
+            <select data-change="spelling-mastery" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white">
+              <option value="ALL" ${this.filterMastery === 'ALL' ? 'selected' : ''}>🎯 全部熟練度</option>
+              <option value="DUE" ${this.filterMastery === 'DUE' ? 'selected' : ''}>⚠️ 今日待複習</option>
+              <option value="NEW" ${this.filterMastery === 'NEW' ? 'selected' : ''}>🌱 尚未評級</option>
+              <option value="LEARNING" ${this.filterMastery === 'LEARNING' ? 'selected' : ''}>📖 學習中 (1~6天)</option>
+              <option value="MASTERED" ${this.filterMastery === 'MASTERED' ? 'selected' : ''}>🌟 已熟記 (>6天)</option>
+            </select>
+          </div>
+        `;
+
+        if (filteredVocab.length === 0) {
+          return `
+            <div class="flex-1 flex flex-col justify-between">
+              ${filterBarHtml}
+              <div class="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-3">
+                <span class="text-4xl">🎯</span>
+                <p class="text-slate-400 text-sm">此條件下沒有相符的測驗題目！</p>
+                <button data-action="spelling-reset-filter" class="px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs text-indigo-300">清除篩選條件</button>
+              </div>
+            </div>
+          `;
+        }
+
+        if (this.currentIndex >= filteredVocab.length) this.currentIndex = 0;
+        const word = filteredVocab[this.currentIndex];
+
+        const langTabs = activeLangs.map(l => `
+          <button data-action="spelling-select-lang" data-lang="${Security.escape(l.code)}" 
+            class="px-3 py-1 rounded-full text-xs font-medium transition-all ${this.activeLang === l.code ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400'}">
+            ${l.flag} ${Security.escape(l.name)}
+          </button>
+        `).join('');
+
+        const currentLangConfig = activeLangs.find(l => l.code === this.activeLang) || activeLangs[0];
+        const correctTarget = (word.targets && word.targets[currentLangConfig.code]) || '';
+        let rubyText = (word.ruby && word.ruby[currentLangConfig.code]) || (currentLangConfig.code === 'ja' ? KanaHelper.buildRuby(correctTarget, phonetic) : correctTarget);
+        if (currentLangConfig.code === 'ja' && !Storage.isFuriganaEnabled()) {
+          rubyText = rubyText.replace(/<rt>.*?<\/rt>/g, '').replace(/<\/?ruby>/g, '');
+        }
+        const phonetic = (word.phonetics && word.phonetics[currentLangConfig.code]) || '';
+        const currentResult = this.results[currentLangConfig.code] || {};
+
+        return `
+          <div class="flex-1 flex flex-col justify-between space-y-3">
+            ${filterBarHtml}
+
+            <div class="flex items-center justify-between">
+              <div class="flex gap-1 p-1 bg-slate-950 rounded-xl border border-slate-800">
+                <button data-action="spelling-set-mode" data-submode="readWrite" class="px-3 py-1 rounded-lg text-xs font-medium ${this.mode === 'readWrite' ? 'bg-indigo-600 text-white' : 'text-slate-400'}">📖 讀寫</button>
+                <button data-action="spelling-set-mode" data-submode="dictation" class="px-3 py-1 rounded-lg text-xs font-medium ${this.mode === 'dictation' ? 'bg-indigo-600 text-white' : 'text-slate-400'}">🎧 聽寫</button>
+              </div>
+              
+              <label class="flex items-center gap-1.5 p-1 bg-slate-800/80 border border-slate-700 rounded-lg text-xs cursor-pointer">
+                <span class="text-[10px] ${Storage.isSmartGuidanceEnabled() ? 'text-amber-300 font-semibold' : 'text-slate-500'}">💡 智慧引導</span>
+                <input data-change="toggle-smart-guidance" type="checkbox" ${Storage.isSmartGuidanceEnabled() ? 'checked' : ''} 
+                  class="w-3.5 h-3.5 rounded text-amber-500 bg-slate-950 border-slate-700" />
+              </label>
+            </div>
+
+            <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+              ${langTabs}
+            </div>
+
+            <div class="bg-slate-800/90 border border-slate-700 rounded-2xl p-5 text-center space-y-1">
+              <div class="flex items-center justify-center gap-1.5 text-xs text-indigo-400 font-medium">
+                <span>${Security.escape(word.category || '通用')}</span>
+                ${word.pos ? `<span class="bg-indigo-900/60 text-indigo-300 border border-indigo-700/50 px-1 rounded text-[10px]">${Security.escape(word.pos)}</span>` : ''}
+              </div>
+              
+              ${this.mode === 'readWrite' ? `
+                <div class="text-2xl font-bold text-white pt-1">${Security.escape(word.baseWord)}</div>
+                ${word.meaningZh ? `<div class="text-xs text-slate-400">中文：${Security.escape(word.meaningZh)}</div>` : ''}
+              ` : `
+                <div class="py-2">
+                  <button data-action="speak" data-text="${Security.escape(correctTarget)}" data-lang="${Security.escape(currentLangConfig.code)}" 
+                    class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full font-medium text-sm flex items-center justify-center gap-2 mx-auto shadow-lg shadow-indigo-600/30">
+                    <span>🔊 播放發音</span>
+                  </button>
+                </div>
+              `}
+
+              ${phonetic ? `
+                <div class="pt-1.5">
+                  ${this.showHint ? `
+                    <span class="text-xs text-amber-300 font-mono">拼音提示: ${Security.escape(phonetic)}</span>
+                  ` : `
+                    <button data-action="spelling-toggle-hint" class="text-[11px] text-slate-500 hover:text-slate-300 underline">顯示讀音提示</button>
+                  `}
+                </div>
+              ` : ''}
+            </div>
+
+            <div class="bg-slate-800/60 border border-slate-700 rounded-2xl p-4 space-y-2.5">
+              <label class="block text-xs font-medium text-slate-300">
+                請輸入 ${Security.escape(currentLangConfig.name)}：
+              </label>
+              <input type="text" id="spellingInput" 
+                placeholder="${Security.escape(currentLangConfig.placeholder)}"
+                value="${Security.escape(currentResult.input || '')}"
+                ${currentResult.isChecked ? 'disabled' : ''}
+                autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+                class="w-full px-4 py-3 bg-slate-950 border ${currentResult.isChecked ? (currentResult.isCorrect ? 'border-emerald-500' : 'border-rose-500') : 'border-slate-700'} rounded-xl text-white text-base focus:outline-none focus:border-indigo-500"
+              />
+
+              ${currentResult.isChecked ? `
+                <div class="p-3 rounded-xl ${currentResult.isCorrect ? 'bg-emerald-950/40 text-emerald-300 border border-emerald-800/40' : (currentResult.guidance ? 'bg-amber-950/40 text-amber-300 border border-amber-800/40' : 'bg-rose-950/40 text-rose-300 border border-rose-800/40')} text-sm">
+                  <div class="font-bold mb-1 flex items-center justify-between">
+                    <span>${currentResult.isCorrect ? '✅ 答對了！' : (currentResult.guidance ? '⚠️ 差一點點！' : '❌ 拼寫有出入')}</span>
+                    <span class="text-xs font-normal text-slate-400">${Security.escape(currentResult.srsIntervalMsg || '')}</span>
+                  </div>
+                  ${currentResult.guidance ? `<div class="text-xs text-amber-200 mb-1">${Security.escape(currentResult.guidance)}</div>` : ''}
+                  ${!currentResult.isCorrect ? `<div class="text-xs">完整標準答案：<span class="font-bold underline">${Security.sanitizeRuby(rubyText)}</span> ${phonetic ? `(${Security.escape(phonetic)})` : ''}</div>` : ''}
+                </div>
+              ` : ''}
+            </div>
+
+            <div class="flex items-center gap-2 pt-1">
+              <button data-action="spelling-prev" data-len="${filteredVocab.length}" class="px-3.5 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-xl text-xs font-semibold transition-all">
+                ◀ 上一題
+              </button>
+              ${!currentResult.isChecked ? `
+                <button data-action="spelling-check" class="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-indigo-600/30 transition-all">
+                  送出驗證
+                </button>
+              ` : `
+                <button data-action="spelling-next" data-len="${filteredVocab.length}" class="flex-1 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-sm font-semibold transition-all">
+                  下一題 ➔
+                </button>
+              `}
+              <button data-action="spelling-next" data-len="${filteredVocab.length}" class="px-3.5 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-xl text-xs font-semibold transition-all">
+                跳過 ▶
+              </button>
+            </div>
+          </div>
+        `;
+      },
+
+      changeCategory(c) { this.filterCategory = c; this.currentIndex = 0; this.results = {}; router.refresh(); },
+      changeMastery(m) { this.filterMastery = m; this.currentIndex = 0; this.results = {}; router.refresh(); },
+      resetFilter() { this.filterCategory = 'ALL'; this.filterMastery = 'ALL'; router.refresh(); },
+      toggleHint() { this.showHint = true; router.refresh(); },
+      setSubMode(m) { this.mode = m; this.results = {}; this.showHint = false; router.refresh(); },
+      selectLang(code) { this.activeLang = code; this.results = {}; this.showHint = false; router.refresh(); },
+
+      check() {
+        const input = document.getElementById('spellingInput');
+        if (!input) return;
+        const val = input.value.trim();
+        const allVocab = Storage.getVocab();
+        const filtered = filterVocabulary(allVocab, this.filterCategory, this.filterMastery, this.activeLang);
+        const word = filtered[this.currentIndex];
+        const correctTarget = (word.targets && word.targets[this.activeLang] || '').trim();
+
+        const lowerVal = val.toLowerCase();
+        const lowerTarget = correctTarget.toLowerCase();
+        let isCorrect = lowerVal === lowerTarget;
+        let guidanceMessage = '';
+
+        if (!isCorrect && Storage.isSmartGuidanceEnabled() && this.activeLang === 'es') {
+          if (lowerTarget.startsWith('el ') && lowerVal === lowerTarget.replace('el ', '').trim()) {
+            guidanceMessage = '💡 拼寫完全正確！但別忘了加上陽性冠詞【el】喔！';
+          } else if (lowerTarget.startsWith('la ') && lowerVal === lowerTarget.replace('la ', '').trim()) {
+            guidanceMessage = '💡 拼寫完全正確！但別忘了加上陰性冠詞【la】喔！';
+          }
+        }
+
+        const updatedSrs = Storage.saveLangSrs(word.id, this.activeLang, isCorrect ? 4 : 1);
+        const intervalMsg = isCorrect 
+          ? `自動推進記憶：${updatedSrs.interval}天後複習` 
+          : '記憶重置：明天複習 (1天)';
+
+        this.results[this.activeLang] = { 
+          isChecked: true, 
+          isCorrect, 
+          input: val,
+          guidance: guidanceMessage,
+          srsIntervalMsg: intervalMsg
+        };
+        router.updateStats();
+        router.refresh();
+      },
+
+      prev(len) {
+        this.currentIndex = (this.currentIndex - 1 + len) % len;
+        this.results = {};
+        this.showHint = false;
+        router.refresh();
+      },
+
+      next(len) {
+        this.currentIndex = (this.currentIndex + 1) % len;
+        this.results = {};
+        this.showHint = false;
+        router.refresh();
+      }
+    };
+
+    // --- 視圖 C: 拼句測驗模組 ---
+    const SentenceTypingView = {
+      currentIndex: 0,
+      targetLang: 'ja',
+      jaForm: 'polite',
+      showHint: false,
+      showGrammar: false,
+      isChecked: false,
+      isCorrect: false,
+      userInput: '',
+      currentVariantIdx: 0,
+      guidanceMessage: '',
+
+      getSentences() {
+        return Storage.getSentences();
+      },
+
+      getSrsKey(sentenceId) {
+        if (this.targetLang === 'ja') {
+          return `${sentenceId}_ja_${this.jaForm}`;
+        }
+        return `${sentenceId}_${this.targetLang}`;
+      },
+
+      getActiveSentence(baseSentence) {
+        let variants = baseSentence.variants;
+        if (typeof variants === 'string') {
+          try { variants = JSON.parse(variants); } catch(e) { variants = []; }
+        }
+
+        if (!variants || variants.length === 0) {
+          return {
+            ...baseSentence,
+            isDynamic: false,
+            activeZh: baseSentence.prompt_zh,
+            activeEn: baseSentence.en_target,
+            activeJa: (this.jaForm === 'plain' && baseSentence.ja_plain) ? baseSentence.ja_plain : baseSentence.ja_target,
+            activeJaRuby: (this.jaForm === 'plain' && baseSentence.ja_plain_ruby) ? baseSentence.ja_plain_ruby : (baseSentence.ja_ruby || baseSentence.ja_target),
+            activeEs: baseSentence.es_target
+          };
+        }
+
+        const v = variants[this.currentVariantIdx % variants.length];
+        const replaceSlot = (str, rep) => (str || '').replace(/\{[a-zA-Z0-9_]+\}/g, rep || '');
+
+        const jaWord = (this.jaForm === 'plain' && v.ja_plain) ? v.ja_plain : v.ja;
+        const jaBase = (this.jaForm === 'plain' && baseSentence.ja_plain) ? baseSentence.ja_plain : baseSentence.ja_target;
+        const jaRubyBase = (this.jaForm === 'plain' && baseSentence.ja_plain_ruby) ? baseSentence.ja_plain_ruby : (baseSentence.ja_ruby || baseSentence.ja_target);
+
+        return {
+          ...baseSentence,
+          isDynamic: true,
+          activeVariant: v,
+          activeZh: replaceSlot(baseSentence.prompt_zh, v.zh),
+          activeEn: replaceSlot(baseSentence.en_target, v.en),
+          activeJa: replaceSlot(jaBase, jaWord),
+          activeJaRuby: replaceSlot(jaRubyBase, jaWord),
+          activeEs: replaceSlot(baseSentence.es_target, v.es)
+        };
+      },
+
+      shuffleVariant() {
+        const sentences = this.getSentences();
+        const base = sentences[this.currentIndex];
+        let variants = base.variants;
+        if (typeof variants === 'string') {
+          try { variants = JSON.parse(variants); } catch(e) { variants = []; }
+        }
+        if (variants && variants.length > 1) {
+          this.currentVariantIdx = (this.currentVariantIdx + 1) % variants.length;
+          this.retry();
+        }
+      },
+
+      retry() {
+        this.isChecked = false;
+        this.userInput = '';
+        this.guidanceMessage = '';
+        router.refresh();
+      },
+
+      render() {
+        const sentences = this.getSentences();
+        const activeLangs = Storage.getUserLangs().filter(l => Storage.isLangActive(l.code));
+
+        if (!activeLangs.some(l => l.code === this.targetLang) && activeLangs.length > 0) {
+          this.targetLang = activeLangs[0].code;
+        }
+
+        if (sentences.length === 0) {
+          return `
+            <div class="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-3">
+              <span class="text-4xl">🧩</span>
+              <p class="text-slate-400 text-sm">目前沒有可用例句。已在試算表建立 Sentences 分頁！</p>
+            </div>
+          `;
+        }
+
+        const rawSentence = sentences[this.currentIndex];
+        const sentence = this.getActiveSentence(rawSentence);
+        const targetLangMeta = activeLangs.find(l => l.code === this.targetLang) || activeLangs[0];
+        const srsKey = this.getSrsKey(rawSentence.id);
+        const srsState = Storage.getSrsRecords()[srsKey];
+
+        let correctText = '';
+        let rubyText = '';
+        if (this.targetLang === 'ja') {
+          correctText = sentence.activeJa;
+          rubyText = sentence.activeJaRuby;
+          if (!Storage.isFuriganaEnabled()) {
+            rubyText = rubyText.replace(/<rt>.*?<\/rt>/g, '').replace(/<\/?ruby>/g, '');
+          }
+        } else if (this.targetLang === 'es') {
+          correctText = sentence.activeEs;
+          rubyText = sentence.activeEs;
+        } else {
+          correctText = sentence.activeEn;
+          rubyText = sentence.activeEn;
+        }
+
+        const langTabs = activeLangs.map(l => `
+          <button data-action="sentence-select-lang" data-lang="${Security.escape(l.code)}" 
+            class="px-3 py-1 rounded-full text-xs font-medium transition-all ${this.targetLang === l.code ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400'}">
+            ${l.flag} ${Security.escape(l.name)}
+          </button>
+        `).join('');
+
+        return `
+          <div class="flex-1 flex flex-col justify-between space-y-3.5">
+            
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                ${langTabs}
+              </div>
+              <span class="text-xs text-slate-400 font-mono">${this.currentIndex + 1} / ${sentences.length}</span>
+            </div>
+
+            ${this.targetLang === 'ja' ? `
+              <div class="flex items-center justify-between bg-slate-950/60 p-1.5 rounded-xl border border-slate-800 text-xs">
+                <span class="text-[11px] text-slate-400 pl-1">日語語境格式：</span>
+                <div class="flex gap-1">
+                  <button data-action="sentence-set-ja-form" data-form="polite" 
+                    class="px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${this.jaForm === 'polite' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-800'}">
+                    🔷 禮貌說法 (丁寧)
+                  </button>
+                  <button data-action="sentence-set-ja-form" data-form="plain" 
+                    class="px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${this.jaForm === 'plain' ? 'bg-amber-600 text-white' : 'text-slate-400 hover:bg-slate-800'}">
+                    🔶 朋友說法 (常體)
+                  </button>
+                </div>
+              </div>
+            ` : ''}
+
+            <div class="bg-gradient-to-br from-indigo-950/70 to-slate-800 border border-indigo-500/30 rounded-2xl p-4 shadow-lg space-y-2">
+              <div class="flex justify-between items-center text-xs text-indigo-300">
+                <div class="flex items-center gap-1.5">
+                  <span class="font-semibold uppercase tracking-wider">${Security.escape(sentence.category || '會話練習')}</span>
+                  ${sentence.isDynamic ? `<span class="bg-amber-950/70 text-amber-300 border border-amber-600/40 text-[10px] px-1.5 py-0.5 rounded-full font-medium">🎲 隨機變體句</span>` : ''}
+                </div>
+                <div class="flex items-center gap-2">
+                  ${sentence.isDynamic ? `
+                    <button data-action="sentence-shuffle-variant" class="text-[11px] text-amber-300 hover:text-white underline">
+                      🎲 換個變體詞
+                    </button>
+                  ` : ''}
+                  <button data-action="sentence-toggle-hint" class="text-[11px] text-slate-400 hover:text-white underline">
+                    ${this.showHint ? '隱藏提示' : '💡 提示'}
+                  </button>
+                </div>
+              </div>
+
+              <div class="text-xl sm:text-2xl font-bold text-white tracking-wide pt-0.5">
+                ${Security.escape(sentence.activeZh)}
+              </div>
+
+              <div class="flex items-center gap-2 pt-0.5">
+                <button data-action="sentence-toggle-grammar" class="px-2.5 py-1 bg-indigo-900/60 hover:bg-indigo-800 text-indigo-300 border border-indigo-600/40 rounded-lg text-xs font-medium transition-colors">
+                  ${this.showGrammar ? '📖 收合文法詳解' : '📖 展開文法詳解'}
+                </button>
+              </div>
+
+              ${this.showGrammar ? `
+                <div class="p-3 bg-slate-950/80 border border-indigo-500/30 rounded-xl text-xs space-y-2 text-slate-300">
+                  <div class="font-bold text-indigo-300 border-b border-slate-800 pb-1 flex items-center justify-between">
+                    <span>💡 句型雙人文法拆解</span>
+                    <button data-action="sentence-toggle-grammar" class="text-slate-500 hover:text-white text-[11px]">▲ 收合</button>
+                  </div>
+                  <div>
+                    <span class="font-semibold text-amber-300">🇯🇵 日語語法要點：</span>
+                    <div class="text-slate-300 pl-2 mt-0.5 leading-relaxed">${Security.escape(sentence.ja_grammar) || '「〜をお願いします」表委婉請求禮貌體；日常口語常簡化為「〜ちょうだい」或「〜頼む」。'}</div>
+                  </div>
+                  <div>
+                    <span class="font-semibold text-pink-300">🇪🇸 西語語法要點：</span>
+                    <div class="text-slate-300 pl-2 mt-0.5 leading-relaxed">${Security.escape(sentence.es_grammar) || 'Mucho gusto 為固定慣用短語；Por favor 可置於句首或句末，名詞請留意陽性(el/un)與陰性(la/una)。'}</div>
+                  </div>
+                </div>
+              ` : ''}
+
+              ${this.showHint && sentence.hints ? `
+                <div class="p-2 bg-indigo-950/50 border border-indigo-500/20 rounded-lg text-xs text-indigo-200 font-mono">
+                  🧩 語意結構：${Security.escape(sentence.hints)}
+                </div>
+              ` : ''}
+              
+              <div class="flex items-center justify-between text-xs text-slate-400 pt-1">
+                <span>目標：${Security.escape(targetLangMeta.name)} ${this.targetLang === 'ja' ? (this.jaForm === 'polite' ? '【禮貌版】' : '【朋友版】') : ''}</span>
+                <span class="text-[11px]">${srsState ? `句型間隔: ${srsState.interval}天` : '句型尚未評級'}</span>
+              </div>
+            </div>
+
+            <div class="bg-slate-800/70 border border-slate-700 rounded-2xl p-4 space-y-2.5">
+              <div class="flex justify-between items-center text-xs text-slate-400">
+                <span>輸入作答區 (點擊下方按鈕驗證)：</span>
+              </div>
+              <textarea id="sentenceInput" rows="3"
+                placeholder="請切換至對應鍵盤輸入完整的句子..."
+                ${this.isChecked ? 'disabled' : ''}
+                autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+                class="w-full p-3 bg-slate-950 border ${this.isChecked ? (this.isCorrect ? 'border-emerald-500' : 'border-rose-500') : 'border-slate-700'} rounded-xl text-white text-base focus:outline-none focus:border-indigo-500 transition-colors"
+              >${Security.escape(this.userInput)}</textarea>
+
+              ${this.isChecked ? `
+                <div class="p-3.5 rounded-xl ${this.isCorrect ? 'bg-emerald-950/40 text-emerald-300 border border-emerald-800/40' : (this.guidanceMessage ? 'bg-amber-950/40 text-amber-300 border border-amber-800/40' : 'bg-rose-950/40 text-rose-300 border border-rose-800/40')} text-xs space-y-1.5">
+                  <div class="font-bold text-sm flex items-center justify-between">
+                    <span>${this.isCorrect ? '🎉 完全正確！語法與拼寫無誤！' : (this.guidanceMessage ? '⚠️ 差一點點！' : '❌ 輸入有偏差')}</span>
+                    <button data-action="speak" data-text="${Security.escape(correctText)}" data-lang="${Security.escape(this.targetLang)}" class="text-base">🔊</button>
+                  </div>
+                  ${this.guidanceMessage ? `<div class="text-xs text-amber-200">${Security.escape(this.guidanceMessage)}</div>` : ''}
+                  <div>正確解答：<span class="font-semibold text-white underline">${Security.sanitizeRuby(rubyText)}</span></div>
+                  
+                  <div class="pt-1.5 border-t border-slate-700/50 flex items-center justify-between text-[11px] text-slate-400">
+                    <span>🧠 記憶排程：</span>
+                    <span class="${this.isCorrect ? 'text-emerald-400' : 'text-rose-400'} font-medium">
+                      ${this.isCorrect ? `自動推進間隔（${this.lastSrsInterval || 6}天後複習）` : '間隔重置為 1天 (明天複習)'}
+                    </span>
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+
+            <div class="pt-1">
+              ${!this.isChecked ? `
+                <div class="flex items-center gap-2">
+                  <button data-action="sentence-prev" class="px-3.5 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-xl text-xs font-semibold transition-all">
+                    ◀ 上一題
+                  </button>
+                  <button data-action="sentence-check" class="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-1.5">
+                    <span>✅ 驗證答案</span>
+                  </button>
+                  <button data-action="sentence-next" class="px-3.5 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-xl text-xs font-semibold transition-all">
+                    跳過 ▶
+                  </button>
+                </div>
+              ` : `
+                <div class="flex items-center gap-2">
+                  <button data-action="sentence-prev" class="px-3.5 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-xl text-xs font-semibold transition-all">
+                    ◀ 上一題
+                  </button>
+                  <button data-action="sentence-retry" class="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-sm font-semibold transition-all">
+                    🔄 再試一次
+                  </button>
+                  <button data-action="sentence-next" class="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-indigo-600/30 transition-all">
+                    下一題 ➔
+                  </button>
+                </div>
+              `}
+            </div>
+          </div>
+        `;
+      },
+
+      setJaForm(form) {
+        this.jaForm = form;
+        this.retry();
+      },
+
+      changeLang(code) {
+        this.targetLang = code;
+        this.retry();
+      },
+
+      toggleHint() {
+        this.showHint = !this.showHint;
+        router.refresh();
+      },
+
+      toggleGrammar() {
+        this.showGrammar = !this.showGrammar;
+        router.refresh();
+      },
+
+      check() {
+        const textarea = document.getElementById('sentenceInput');
+        if (!textarea) return;
+        this.userInput = textarea.value.trim();
+        if (!this.userInput) return;
+
+        const rawSentence = this.getSentences()[this.currentIndex];
+        const sentence = this.getActiveSentence(rawSentence);
+
+        let correctText = '';
+        let altText = '';
+        
+        if (this.targetLang === 'ja') {
+          correctText = sentence.activeJa;
+          altText = (this.jaForm === 'polite') ? (sentence.ja_plain || '') : (sentence.ja_target || '');
+        } else if (this.targetLang === 'es') {
+          correctText = sentence.activeEs;
+        } else {
+          correctText = sentence.activeEn;
+        }
+
+        const clean = str => (str || '').replace(/[^a-zA-Z0-9一-龥぀-ゟ゠-ヿáéíóúÁÉÍÓÚñÑüÜ]/g, "").toLowerCase();
+
+        const cleanUser = clean(this.userInput);
+        const cleanCorrect = clean(correctText);
+        const cleanAlt = clean(altText);
+
+        let isMatch = (cleanUser === cleanCorrect);
+        let guidance = '';
+
+        if (!isMatch && Storage.isSmartGuidanceEnabled()) {
+          if (this.targetLang === 'ja' && cleanAlt && cleanUser === cleanAlt) {
+            guidance = (this.jaForm === 'polite') 
+              ? '💡 意思完全正確！但這是【朋友日常說法 (常體)】，本題目標是【禮貌說法 (ます・です形)】喔！'
+              : '💡 意思完全正確！但這是【禮貌說法 (丁寧)】，本題目標是【朋友說法 (常體)】喔！';
+          } else if (this.targetLang === 'es') {
+            if (cleanCorrect.startsWith('el') && cleanUser === cleanCorrect.slice(2)) {
+              guidance = '💡 拼寫很棒！但別忘了加上定冠詞【el】喔！';
+            } else if (cleanCorrect.startsWith('la') && cleanUser === cleanCorrect.slice(2)) {
+              guidance = '💡 拼寫很棒！但別忘了加上定冠詞【la】喔！';
+            }
+          }
+        }
+
+        this.isChecked = true;
+        this.isCorrect = isMatch;
+        this.guidanceMessage = guidance;
+
+        const currentQuality = isMatch ? 4 : 1;
+        const subLang = this.targetLang + (this.targetLang === 'ja' ? '_' + this.jaForm : '');
+        const updatedSentenceSrs = Storage.saveLangSrs(rawSentence.id, subLang, currentQuality);
+        this.lastSrsInterval = updatedSentenceSrs.interval;
+
+        if (isMatch) {
+          TTS.speak(correctText, this.targetLang);
+        }
+
+        router.updateStats();
+        router.refresh();
+      },
+
+      prev() {
+        const sentences = this.getSentences();
+        this.currentIndex = (this.currentIndex - 1 + sentences.length) % sentences.length;
+        this.currentVariantIdx = Math.floor(Math.random() * 5);
+        this.retry();
+      },
+
+      next() {
+        const sentences = this.getSentences();
+        this.currentIndex = (this.currentIndex + 1) % sentences.length;
+        this.currentVariantIdx = Math.floor(Math.random() * 5);
+        this.retry();
+      }
+    };
+
+    // --- 視圖 D: 新增單字頁面 ---
+    const AddWordView = {
+      isProcessing: false,
+      statusMessage: '',
+
+      render() {
+        const categories = Storage.getCategories();
+        const userLangs = Storage.getUserLangs();
+        const aiEnabled = Storage.isAiEnabled();
+
+        const dynamicInputs = userLangs.map(lang => `
+          <div class="space-y-1.5 p-3 bg-slate-900/60 rounded-xl border border-slate-800">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                <span>${lang.flag}</span>
+                <span>${Security.escape(lang.name)}</span>
+              </label>
+              <span class="text-[10px] text-slate-500">${Security.escape(lang.phoneticLabel)}</span>
+            </div>
+            <input type="text" id="target_${Security.escape(lang.code)}" placeholder="輸入${Security.escape(lang.name)} (留白由 AI 補齊)..." 
+              class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500" />
+            <input type="text" id="phonetic_${Security.escape(lang.code)}" placeholder="讀音/標記 (選填)..." 
+              class="w-full px-3 py-1.5 bg-slate-950/70 border border-slate-800 rounded-lg text-xs text-indigo-300 font-mono focus:outline-none focus:border-indigo-500" />
+          </div>
+        `).join('');
+
+        return `
+          <div class="flex-1 flex flex-col space-y-3.5">
+            <div class="flex items-center justify-between">
+              <div>
+                <h2 class="text-base font-bold text-white">智慧錄入單字</h2>
+                <p class="text-xs text-slate-400">任選一欄輸入，儲存時寫入資料庫。</p>
+              </div>
+
+              <label class="flex items-center gap-1.5 p-1.5 bg-slate-800/80 border border-slate-700 rounded-xl text-xs cursor-pointer">
+                <span class="text-[11px] font-medium ${aiEnabled ? 'text-indigo-300' : 'text-slate-400'}">🤖 AI 補齊</span>
+                <input data-change="toggle-ai-autofill" type="checkbox" ${aiEnabled ? 'checked' : ''} class="w-4 h-4 rounded text-indigo-600 focus:ring-0 bg-slate-950 border-slate-700 cursor-pointer" />
+              </label>
+            </div>
+
+            <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 space-y-3 flex-1 overflow-y-auto no-scrollbar">
+              <div class="space-y-1">
+                <label class="block text-xs font-semibold text-amber-300">繁體中文意思 (母語)</label>
+                <input type="text" id="input_meaningZh" placeholder="例如：早安、圖書館 (留白由 AI 自動反推)..." 
+                  class="w-full px-3 py-2 bg-slate-950 border border-amber-500/30 rounded-xl text-sm text-white focus:outline-none focus:border-amber-500" />
+              </div>
+
+              <div class="space-y-1">
+                <label class="block text-xs font-semibold text-slate-300">基準語言 (英文 - Base Word)</label>
+                <input type="text" id="input_baseWord" placeholder="輸入英文 (留白由 AI 自動反推)..." 
+                  class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500" />
+              </div>
+
+              <div class="grid grid-cols-2 gap-2">
+                <div class="space-y-1">
+                  <label class="block text-xs font-semibold text-slate-300">分類</label>
+                  <select id="select_category" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500">
+                    <option value="__AUTO__">✨ AI 自動分類</option>
+                    ${categories.map(c => `<option value="${Security.escape(c)}">${Security.escape(c)}</option>`).join('')}
+                    <option value="__NEW__">+ 自訂新分類...</option>
+                  </select>
+                </div>
+                <div class="space-y-1">
+                  <label class="block text-xs font-semibold text-slate-300">詞性 (選填)</label>
+                  <input type="text" id="input_pos" placeholder="名詞 / 動詞 (留白由 AI 判斷)" 
+                    class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500" />
+                </div>
+              </div>
+
+              <div class="space-y-2 pt-1">
+                ${dynamicInputs}
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              ${this.statusMessage ? `<div class="text-center text-xs text-indigo-300 animate-pulse">${Security.escape(this.statusMessage)}</div>` : ''}
+              <button data-action="addword-save" 
+                ${this.isProcessing ? 'disabled' : ''}
+                class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 text-white rounded-xl text-sm font-semibold shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2">
+                <span>${this.isProcessing ? '⏳ 處理中...' : '💾 儲存並同步至 Google Sheet'}</span>
+              </button>
+            </div>
+          </div>
+        `;
+      },
+
+      getFormValues() {
+        const baseWord = (document.getElementById('input_baseWord')?.value || '').trim();
+        const meaningZh = (document.getElementById('input_meaningZh')?.value || '').trim();
+        const category = document.getElementById('select_category')?.value;
+        const pos = (document.getElementById('input_pos')?.value || '').trim();
+        const targets = {};
+        const phonetics = {};
+
+        Storage.getUserLangs().forEach(lang => {
+          targets[lang.code] = (document.getElementById(`target_${lang.code}`)?.value || '').trim();
+          phonetics[lang.code] = (document.getElementById(`phonetic_${lang.code}`)?.value || '').trim();
+        });
+
+        return { baseWord, meaningZh, category, pos, targets, phonetics };
+      },
+
+      applyAiResult(aiResult) {
+        if (aiResult.baseWord) {
+          const b = document.getElementById('input_baseWord');
+          if (b && !b.value.trim()) b.value = aiResult.baseWord;
+        }
+        if (aiResult.meaningZh) {
+          const z = document.getElementById('input_meaningZh');
+          if (z && !z.value.trim()) z.value = aiResult.meaningZh;
+        }
+        if (aiResult.pos) {
+          const p = document.getElementById('input_pos');
+          if (p && !p.value.trim()) p.value = aiResult.pos;
+        }
+        if (aiResult.category) {
+          const selectCat = document.getElementById('select_category');
+          if (selectCat && selectCat.value === '__AUTO__') {
+            Storage.addCategory(aiResult.category);
+            selectCat.innerHTML = `
+              <option value="${Security.escape(aiResult.category)}" selected>${Security.escape(aiResult.category)}</option>
+              ${Storage.getCategories().map(c => `<option value="${Security.escape(c)}">${Security.escape(c)}</option>`).join('')}
+              <option value="__NEW__">+ 自訂新分類...</option>
+            `;
+          }
+        }
+        if (aiResult.targets) {
+          Storage.getUserLangs().forEach(lang => {
+            const data = aiResult.targets[lang.code];
+            const tElem = document.getElementById(`target_${lang.code}`);
+            const pElem = document.getElementById(`phonetic_${lang.code}`);
+            if (tElem && !tElem.value.trim() && data?.translation) tElem.value = data.translation;
+            if (pElem && !pElem.value.trim() && data?.phonetic) pElem.value = data.phonetic;
+          });
+        }
+      },
+
+      hasAtLeastOneInput(v) {
+        if (v.baseWord || v.meaningZh) return true;
+        return Object.values(v.targets).some(val => !!val);
+      },
+
+      hasEmptyFields(v) {
+        if (!v.baseWord || !v.meaningZh || !v.pos) return true;
+        for (let lang of Storage.getUserLangs()) {
+          if (!v.targets[lang.code] || !v.phonetics[lang.code]) return true;
+        }
+        return false;
+      },
+
+      async saveWord() {
+        let formValues = this.getFormValues();
+        if (!this.hasAtLeastOneInput(formValues)) return alert('請至少在任一欄位輸入一個單字！');
+
+        this.isProcessing = true;
+
+        if (Storage.isAiEnabled() && this.hasEmptyFields(formValues)) {
+          this.statusMessage = '🤖 正在透過 AI 自動補齊缺漏語言...';
+          router.refresh();
+          try {
+            const aiResult = await AIHelper.fillMissingFields(formValues);
+            this.applyAiResult(aiResult);
+            this.lastAiResult = aiResult;
+            formValues = this.getFormValues();
+          } catch (err) {
+            if (!confirm(`自動補齊未執行（${err.message}）。是否仍要以現有輸入內容儲存？`)) {
+              this.isProcessing = false;
+              this.statusMessage = '';
+              router.refresh();
+              return;
+            }
+          }
+        }
+
+        let finalCategory = formValues.category;
+        if (finalCategory === '__NEW__') {
+          finalCategory = prompt('請輸入新分類名稱：') || '通用';
+          Storage.addCategory(finalCategory);
+        } else if (finalCategory === '__AUTO__') {
+          finalCategory = '通用';
+        }
+
+        const isTest = Storage.isTestMode();
+        const rubyMap = {};
+        if (this.lastAiResult?.targets) {
+          for (let code in this.lastAiResult.targets) {
+            if (this.lastAiResult.targets[code]?.ruby) rubyMap[code] = this.lastAiResult.targets[code].ruby;
+          }
+        }
+
+        const newWord = {
+          id: (isTest ? 'test_' : 'w_') + Date.now(),
+          category: (isTest ? '[測試] ' : '') + finalCategory,
+          pos: formValues.pos || '詞彙',
+          baseWord: formValues.baseWord || formValues.meaningZh || 'Untranslated',
+          meaningZh: formValues.meaningZh || '',
+          targets: formValues.targets,
+          ruby: rubyMap,
+          phonetics: formValues.phonetics
+        };
+
+        Storage.addWord(newWord);
+
+        const gasUrl = Storage.getGasUrl();
+        if (gasUrl) {
+          this.statusMessage = '☁️ 正在寫入 Google 試算表...';
+          router.refresh();
+          try {
+            await fetch(gasUrl, {
+              method: 'POST',
+              body: JSON.stringify({ action: 'appendRow', word: newWord, token: Storage.getGasToken() })
+            });
+            alert('🎉 成功！單字已同時存入本地與 Google 試算表。');
+          } catch (err) {
+            alert('已存入本地，但寫入 Google 試算表失敗，請確認網路與 Token。');
+          }
+        } else {
+          alert('單字已儲存於本地！');
+        }
+
+        this.isProcessing = false;
+        this.statusMessage = '';
+        router.updateStats();
+        router.navigate('flashcard');
+      }
+    };
+
+    // --- 視圖 E: 設定模組 (含安全警告、Token 防護與會話儲存切換) ---
+    const SettingsView = {
+      isPulling: false,
+      isSyncingSrs: false,
+      isBatchFilling: false,
+
+      render() {
+        const gasUrl = Storage.getGasUrl();
+        const gasToken = Storage.getGasToken();
+        const geminiKey = Storage.getGeminiKey();
+        const keyMode = Storage.getKeyStorageMode();
+        const vocab = Storage.getVocab();
+        const isTest = Storage.isTestMode();
+        const testCount = Storage.getTestIds().length;
+        const userLangs = Storage.getUserLangs();
+
+        const unaddedPresets = PRESET_LANGUAGES.filter(p => !userLangs.some(ul => ul.code === p.code));
+
+        const langManageList = userLangs.map(l => `
+          <div class="flex items-center justify-between p-2.5 bg-slate-900/60 rounded-xl border border-slate-800 text-xs">
+            <div class="flex items-center gap-2">
+              <span class="text-base">${l.flag}</span>
+              <div>
+                <div class="font-semibold text-slate-200">${Security.escape(l.name)}</div>
+                <div class="text-[10px] text-slate-500 font-mono">${Security.escape(l.code)} | ${Security.escape(l.ttsLang)}</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="flex items-center gap-1 cursor-pointer">
+                <input data-change="toggle-lang-active" data-lang="${Security.escape(l.code)}" type="checkbox" ${Storage.isLangActive(l.code) ? 'checked' : ''} 
+                  class="w-4 h-4 rounded text-indigo-600 focus:ring-0 bg-slate-950 border-slate-700" />
+                <span class="text-[11px] text-slate-400">啟用</span>
+              </label>
+              ${userLangs.length > 1 ? `
+                <button data-action="remove-user-lang" data-lang="${Security.escape(l.code)}" class="text-rose-400 hover:text-rose-300 p-1">✕</button>
+              ` : ''}
+            </div>
+          </div>
+        `).join('');
+
+        const allLangs = [{ code: 'en', name: '英語 (基準)' }, ...userLangs];
+        const volumeSliders = allLangs.map(l => `
+          <div class="flex items-center justify-between gap-3 text-xs">
+            <span class="w-24 text-slate-300 truncate">${Security.escape(l.name)}</span>
+            <input data-change="settings-volume" data-lang="${Security.escape(l.code)}" type="range" min="0" max="1" step="0.1" value="${Storage.getVolume(l.code)}" 
+              class="flex-1 accent-indigo-500 cursor-pointer" />
+            <span id="vol-label-${Security.escape(l.code)}" class="w-8 text-right text-slate-400 font-mono">${Math.round(Storage.getVolume(l.code) * 100)}%</span>
+          </div>
+        `).join('');
+
+        return `
+          <div class="flex-1 flex flex-col space-y-4">
+            
+            <!-- 學習輔助標註開關 -->
+            <div class="bg-slate-800/80 border border-indigo-500/40 rounded-2xl p-4 space-y-3 shadow-lg">
+              <h3 class="text-xs font-bold text-white flex items-center gap-1.5">
+                <span>🎨</span> 學習輔助標註開關
+              </h3>
+              <div class="space-y-2 pt-1 text-xs">
+                <label class="flex items-center justify-between p-2.5 bg-slate-900/60 rounded-xl border border-slate-800 cursor-pointer">
+                  <span class="text-slate-200">🇯🇵 日文漢字上方振假名標註 (Ruby)</span>
+                  <input data-change="toggle-furigana-setting" type="checkbox" ${Storage.isFuriganaEnabled() ? 'checked' : ''} 
+                    class="w-4 h-4 rounded text-indigo-600 bg-slate-950 border-slate-700 cursor-pointer" />
+                </label>
+                <label class="flex items-center justify-between p-2.5 bg-slate-900/60 rounded-xl border border-slate-800 cursor-pointer">
+                  <span class="text-slate-200">🇪🇸 西班牙文陰陽性色彩與標籤 (el / la)</span>
+                  <input data-change="toggle-es-gender-setting" type="checkbox" ${Storage.isEsGenderEnabled() ? 'checked' : ''} 
+                    class="w-4 h-4 rounded text-indigo-600 bg-slate-950 border-slate-700 cursor-pointer" />
+                </label>
+              </div>
+            </div>
+
+            <!-- 語言管理 -->
+            <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 space-y-3">
+              <div class="flex items-center justify-between">
+                <h3 class="text-xs font-bold text-white flex items-center gap-1.5">
+                  <span>🌐</span> 學習語言管理與擴充
+                </h3>
+                <span class="text-[10px] text-indigo-300">${userLangs.length} 個語言</span>
+              </div>
+
+              <div class="space-y-1.5">
+                ${langManageList}
+              </div>
+
+              ${unaddedPresets.length > 0 ? `
+                <div class="flex gap-2 pt-1 border-t border-slate-700/50">
+                  <select id="newLangSelect" class="flex-1 px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white">
+                    ${unaddedPresets.map(p => `<option value="${Security.escape(p.code)}">${p.flag} ${Security.escape(p.name)}</option>`).join('')}
+                  </select>
+                  <button data-action="add-new-lang" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold">＋ 加入語言</button>
+                </div>
+              ` : '<div class="text-[11px] text-slate-500 text-center">已加入所有預設語言</div>'}
+
+              <button data-action="batch-fill-missing" 
+                ${this.isBatchFilling ? 'disabled' : ''}
+                class="w-full py-2.5 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors">
+                ${this.isBatchFilling ? '⏳ 正在批次翻譯舊單字中...' : '🔄 批次為所有舊單字補齊新語言'}
+              </button>
+            </div>
+
+            <!-- 音量調節 -->
+            <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 space-y-2.5">
+              <h3 class="text-xs font-bold text-white flex items-center gap-1.5">
+                <span>🔊</span> 各語言朗讀音量調節
+              </h3>
+              <div class="space-y-2 pt-1">
+                ${volumeSliders}
+              </div>
+            </div>
+
+            <!-- Gemini API Key (含資安防護警示與會話暫存切換) -->
+            <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 space-y-3">
+              <h3 class="text-xs font-bold text-white flex items-center gap-1.5">
+                <span>🤖</span> Gemini API Key
+              </h3>
+              
+              <div class="p-2.5 bg-amber-950/40 border border-amber-600/40 rounded-xl text-[11px] text-amber-200 leading-relaxed space-y-1">
+                <div class="font-bold flex items-center gap-1 text-amber-300">
+                  <span>⚠️</span> 資安防護重要提醒
+                </div>
+                <div>本專案為公開部署之純前端架構。<strong>請勿輸入綁定高額信用卡或無預算上限的 API Key</strong>，強烈建議使用未綁定帳單的免費專用 Key。</div>
+              </div>
+
+              <div class="space-y-1.5">
+                <div class="flex items-center justify-between text-[11px] text-slate-400">
+                  <span>儲存時效模式：</span>
+                  <div class="flex gap-2">
+                    <label class="flex items-center gap-1 cursor-pointer">
+                      <input data-change="change-key-mode" type="radio" name="keyMode" value="local" ${keyMode === 'local' ? 'checked' : ''} />
+                      <span>永久保存</span>
+                    </label>
+                    <label class="flex items-center gap-1 cursor-pointer">
+                      <input data-change="change-key-mode" type="radio" name="keyMode" value="session" ${keyMode === 'session' ? 'checked' : ''} />
+                      <span class="text-amber-300 font-medium">僅本次有效 (關閉即銷毀)</span>
+                    </label>
+                  </div>
+                </div>
+                <div class="flex gap-2">
+                  <input type="password" id="geminiKeyInput" value="${Security.escape(geminiKey)}" placeholder="AIzaSy..." 
+                    class="flex-1 px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500 font-mono" />
+                  <button data-action="save-gemini-key" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold">儲存</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Google Apps Script 雙向串接 (含自訂 Secret Token 防護) -->
+            <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 space-y-3">
+              <h3 class="text-xs font-bold text-white flex items-center gap-1.5">
+                <span>📊</span> Google Apps Script 雙向串接與安全權杖
+              </h3>
+
+              <div class="space-y-2">
+                <div class="flex gap-2">
+                  <input type="url" id="gasUrlInput" value="${Security.escape(gasUrl)}" placeholder="Web App URL (/exec)..." 
+                    class="flex-1 px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500 font-mono" />
+                  <button data-action="save-gas-url" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold">儲存網址</button>
+                </div>
+
+                <div class="flex gap-2">
+                  <input type="password" id="gasTokenInput" value="${Security.escape(gasToken)}" placeholder="選填：自訂安全權杖 (Secret Token)..." 
+                    class="flex-1 px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500 font-mono" />
+                  <button data-action="save-gas-token" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl text-xs font-semibold">儲存 Token</button>
+                </div>
+                <div class="text-[10px] text-slate-500">※ 若試算表端設定了驗證 Token，所有請求必須攜帶相符 Token 才能寫入，防止惡意竄改。</div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2 pt-1">
+                <button data-action="pull-from-sheet" 
+                  ${this.isPulling ? 'disabled' : ''}
+                  class="py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1">
+                  ${this.isPulling ? '⏳ 拉取中...' : '🔄 完整拉取詞庫'}
+                </button>
+                <button data-action="upload-srs-now" 
+                  ${this.isSyncingSrs ? 'disabled' : ''}
+                  class="py-2.5 bg-indigo-700 hover:bg-indigo-600 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1">
+                  ${this.isSyncingSrs ? '⏳ 上傳中...' : '☁️ 立即同步熟練度'}
+                </button>
+              </div>
+            </div>
+
+            <!-- 測試模式 -->
+            <div class="bg-slate-800/80 border ${isTest ? 'border-amber-500/60 bg-amber-950/20' : 'border-slate-700'} rounded-2xl p-4 space-y-2.5">
+              <div class="flex items-center justify-between">
+                <h3 class="text-xs font-bold text-white flex items-center gap-1.5">
+                  <span>🧪</span> 測試模式
+                </h3>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input data-change="toggle-test-mode-setting" type="checkbox" ${isTest ? 'checked' : ''} class="sr-only peer">
+                  <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+                </label>
+              </div>
+              <p class="text-[11px] text-slate-400">開啟後新增的單字將被標註為測試資料，可一鍵從雲端與本地同步刪除。</p>
+              ${testCount > 0 ? `
+                <div class="flex items-center justify-between pt-1">
+                  <span class="text-xs text-amber-300">累積測試單字: ${testCount} 筆</span>
+                  <button data-action="clear-test-data" class="px-3 py-1 bg-rose-900/60 hover:bg-rose-800 text-rose-200 border border-rose-700/50 rounded-lg text-xs font-medium">一鍵清理測試資料</button>
+                </div>
+              ` : ''}
+            </div>
+
+            <!-- 本地資料庫管理與安全重置 -->
+            <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 space-y-2">
+              <h3 class="text-xs font-bold text-white flex items-center gap-1.5">
+                <span>💾</span> 本地資料庫備份與重置
+              </h3>
+              <div class="grid grid-cols-2 gap-2 pt-1">
+                <button data-action="export-backup" class="py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-xs font-medium">
+                  📤 導出 JSON 備份
+                </button>
+                <button data-action="reset-srs-only" class="py-2.5 bg-amber-950/50 hover:bg-amber-900/60 text-amber-300 border border-amber-800/50 rounded-xl text-xs font-medium">
+                  🗑️ 僅重置學習熟練度
+                </button>
+              </div>
+              <div class="grid grid-cols-2 gap-2 pt-1">
+                <button data-action="reset-to-seed" class="py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium">
+                  還原為預設題庫
+                </button>
+                <button data-action="clear-local-cache" class="py-2 bg-rose-950/60 hover:bg-rose-900 text-rose-200 border border-rose-700/50 rounded-xl text-xs font-semibold">
+                  💥 清除本地相關暫存檔
+                </button>
+              </div>
+            </div>
+
+            <div class="text-[11px] text-slate-500 text-center pb-4">
+              題庫量: ${vocab.length} 筆 | 語言數: ${userLangs.length}
+            </div>
+
+          </div>
+        `;
+      },
+
+      addNewLang() {
+        const select = document.getElementById('newLangSelect');
+        if (!select) return;
+        const code = select.value;
+        const preset = PRESET_LANGUAGES.find(p => p.code === code);
+        if (preset) {
+          Storage.addUserLang(preset);
+          alert(`已成功加入 ${preset.name}！您可以點擊「批次補齊」自動更新題庫。`);
+          router.refresh();
+        }
+      },
+
+      async batchFillMissing() {
+        const vocab = Storage.getVocab();
+        const userLangs = Storage.getUserLangs();
+        const missingWords = vocab.filter(w => userLangs.some(l => !w.targets || !w.targets[l.code]));
+
+        if (missingWords.length === 0) return alert('目前所有單字皆已完整包含所有啟用的語言！');
+        if (!confirm(`共有 ${missingWords.length} 筆單字缺少新語言翻譯，是否開始批次補齊？`)) return;
+
+        this.isBatchFilling = true;
+        router.refresh();
+
+        let updatedCount = 0;
+        try {
+          for (let word of missingWords) {
+            const aiResult = await AIHelper.fillMissingFields({
+              baseWord: word.baseWord,
+              meaningZh: word.meaningZh,
+              category: word.category,
+              pos: word.pos,
+              targets: word.targets || {}
+            }, userLangs);
+
+            word.targets = word.targets || {};
+            word.phonetics = word.phonetics || {};
+            word.ruby = word.ruby || {};
+            if (!word.pos && aiResult.pos) word.pos = aiResult.pos;
+
+            userLangs.forEach(l => {
+              if (!word.targets[l.code] && aiResult.targets?.[l.code]?.translation) {
+                word.targets[l.code] = aiResult.targets[l.code].translation;
+                word.phonetics[l.code] = aiResult.targets[l.code].phonetic || '';
+                if (aiResult.targets[l.code].ruby) word.ruby[l.code] = aiResult.targets[l.code].ruby;
+              }
+            });
+            updatedCount++;
+          }
+
+          Storage.setVocab(vocab);
+          alert(`批次補齊完成！成功為 ${updatedCount} 筆單字補全多語翻譯。`);
+        } catch (err) {
+          alert(`補齊過程中斷 (${err.message})，已成功完成 ${updatedCount} 筆。`);
+        } finally {
+          this.isBatchFilling = false;
+          router.refresh();
+        }
+      },
+
+      saveGeminiKey() {
+        const val = document.getElementById('geminiKeyInput')?.value;
+        Storage.setGeminiKey(val || '');
+        alert('Gemini API Key 已安全儲存！');
+      },
+
+      saveGasUrl() {
+        const val = document.getElementById('gasUrlInput')?.value;
+        Storage.setGasUrl(val || '');
+        alert('Google Apps Script 網址已儲存！');
+      },
+
+      saveGasToken() {
+        const val = document.getElementById('gasTokenInput')?.value;
+        Storage.setGasToken(val || '');
+        alert('安全權杖 (Secret Token) 已儲存！');
+      },
+
+      async uploadSrsNow() {
+        const url = Storage.getGasUrl();
+        if (!url) return alert('請先儲存 Google Apps Script 網址！');
+        this.isSyncingSrs = true;
+        router.refresh();
+
+        try {
+          await fetch(url, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'syncSrs', srsRecords: Storage.getSrsRecords(), token: Storage.getGasToken() })
+          });
+          alert('熟練度進度已成功同步至 Google 試算表「SRS_Progress」分頁！');
+        } catch(e) {
+          alert('同步失敗，請確認網路連線或 Token 設定。');
+        } finally {
+          this.isSyncingSrs = false;
+          router.refresh();
+        }
+      },
+
+      async pullFromSheet() {
+        const url = Storage.getGasUrl();
+        if (!url) return alert('請先填入並儲存 Google Apps Script 網址！');
+
+        this.isPulling = true;
+        router.refresh();
+
+        try {
+          const res = await fetch(url);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const sheetWords = await res.json();
+
+          if (!Array.isArray(sheetWords) || sheetWords.length === 0) throw new Error('試算表中未發現有效單字');
+
+          Storage.setVocab(sheetWords);
+          alert(`同步成功！已成功自試算表拉取 ${sheetWords.length} 筆單字。`);
+        } catch (err) {
+          alert(`拉取失敗: ${err.message}\n請確認 Apps Script 權限設為「所有人 (Anyone)」。`);
+        } finally {
+          this.isPulling = false;
+          router.updateStats();
+          router.refresh();
+        }
+      },
+
+      exportBackup() {
+        const payload = {
+          vocab: Storage.getVocab(),
+          srs: Storage.getSrsRecords(),
+          date: new Date().toISOString()
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `polyglot_backup_${new Date().toISOString().slice(0, 10)}.json`;
+        a.click();
+      },
+
+      async resetSrsOnly() {
+        if (!confirm('確定要將所有單字與句型的「熟練度天數」歸零重置嗎？\n（您現有的單字與句型將完整保留）')) return;
+        localStorage.removeItem(Storage.KEY_SRS);
+        Storage.srsPendingCount = 0;
+
+        const gasUrl = Storage.getGasUrl();
+        if (gasUrl) {
+          try {
+            await fetch(gasUrl, {
+              method: 'POST',
+              body: JSON.stringify({ action: 'syncSrs', srsRecords: {}, token: Storage.getGasToken() })
+            });
+          } catch(e) {}
+        }
+
+        alert('✅ 已成功將所有熟練度進度歸零！試算表上的 SRS_Progress 也已同步清空。');
+        router.updateStats();
+        router.refresh();
+      },
+
+      clearLocalCache() {
+        if (!confirm('確定要清除本學習應用的所有本地暫存檔嗎？\n\n包含：本機暫存單字、進度、API Key 與設定。\n（此操作只針對本應用，絕對不會影響電腦其他檔案或其他網站）')) return;
+        localStorage.clear();
+        sessionStorage.clear();
+        alert('✅ 已成功清除本應用所有本地暫存檔！即將自動重新整理還原初始狀態。');
+        window.location.reload();
+      },
+
+      resetToSeed() {
+        if (!confirm('確定要還原成預設題庫嗎？這將覆蓋本地自訂項目。')) return;
+        Storage.setVocab(INITIAL_VOCABULARY);
+        localStorage.removeItem(Storage.KEY_SRS);
+        alert('✅ 已還原為預設題庫！');
+        router.updateStats();
+        router.refresh();
+      }
+    };
+
+    /**
+     * 8. 路由管理器
+     */
+    const router = {
+      currentView: 'flashcard',
+      views: {
+        flashcard: FlashcardView,
+        spelling: SpellingView,
+        sentence: SentenceTypingView,
+        addWord: AddWordView,
+        settings: SettingsView
+      },
+
+      navigate(name) {
+        if (!this.views[name]) return;
+        this.currentView = name;
+
+        ['flashcard', 'spelling', 'sentence', 'addWord', 'settings'].forEach(v => {
+          const btn = document.getElementById(`nav-${v}`);
+          if (btn) {
+            btn.className = (v === name) 
+              ? 'flex-1 min-w-[70px] py-2 rounded-lg text-center transition-all bg-indigo-600 text-white font-semibold'
+              : 'flex-1 min-w-[70px] py-2 rounded-lg text-center transition-all text-slate-400 hover:bg-slate-800';
+          }
+        });
+
+        this.refresh();
+      },
+
+      refresh() {
+        Storage.updateTestBanner();
+        const container = document.getElementById('viewContainer');
+        const view = this.views[this.currentView];
+        if (container && view) container.innerHTML = view.render();
+      },
+
+      updateStats() {
+        const vocab = Storage.getVocab();
+        const records = Storage.getSrsRecords();
+        const badge = document.getElementById('statsBadge');
+        if (badge) {
+          badge.textContent = `📚 詞庫: ${vocab.length} | 🎯 進度點: ${Object.keys(records).length}`;
+        }
+      },
+
+      init() {
+        this.updateStats();
+        Storage.updateTestBanner();
+        this.navigate('flashcard');
+      }
+    };
+
+    /**
+     * =========================================================================
+     * 9. 全域宣告式事件委派核心 (Event Delegation Hub)
+     * 徹底拔除所有 HTML 中的 inline 事件，符合嚴格 CSP 規範
+     * =========================================================================
+     */
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      const action = btn.dataset.action;
+
+      switch(action) {
+        case 'navigate':
+          router.navigate(btn.dataset.target);
+          break;
+        case 'clear-test-data':
+          Storage.clearTestModeData();
+          break;
+        case 'speak':
+          TTS.speak(btn.dataset.text, btn.dataset.lang);
+          break;
+
+        // 字卡動作
+        case 'toggle-es-gender':
+          Storage.setEsGenderEnabled(!Storage.isEsGenderEnabled());
+          router.refresh();
+          break;
+        case 'toggle-furigana':
+          Storage.setFuriganaEnabled(!Storage.isFuriganaEnabled());
+          router.refresh();
+          break;
+        case 'toggle-phonetics':
+          FlashcardView.togglePhonetics();
+          break;
+        case 'flashcard-reveal-zh':
+          FlashcardView.revealZh();
+          break;
+        case 'flashcard-toggle-target':
+          FlashcardView.toggleReveal(btn.dataset.lang);
+          break;
+        case 'flashcard-rate':
+          FlashcardView.rate(btn.dataset.lang, parseInt(btn.dataset.quality, 10));
+          break;
+        case 'flashcard-prev':
+          FlashcardView.prev(parseInt(btn.dataset.len, 10));
+          break;
+        case 'flashcard-next':
+          FlashcardView.next(parseInt(btn.dataset.len, 10));
+          break;
+        case 'flashcard-reset-filter':
+          FlashcardView.resetFilter();
+          break;
+
+        // 拼寫動作
+        case 'spelling-set-mode':
+          SpellingView.setSubMode(btn.dataset.submode);
+          break;
+        case 'spelling-select-lang':
+          SpellingView.selectLang(btn.dataset.lang);
+          break;
+        case 'spelling-toggle-hint':
+          SpellingView.toggleHint();
+          break;
+        case 'spelling-check':
+          SpellingView.check();
+          break;
+        case 'spelling-prev':
+          SpellingView.prev(parseInt(btn.dataset.len, 10));
+          break;
+        case 'spelling-next':
+          SpellingView.next(parseInt(btn.dataset.len, 10));
+          break;
+        case 'spelling-reset-filter':
+          SpellingView.resetFilter();
+          break;
+
+        // 拼句動作
+        case 'sentence-select-lang':
+          SentenceTypingView.changeLang(btn.dataset.lang);
+          break;
+        case 'sentence-set-ja-form':
+          SentenceTypingView.setJaForm(btn.dataset.form);
+          break;
+        case 'sentence-shuffle-variant':
+          SentenceTypingView.shuffleVariant();
+          break;
+        case 'sentence-toggle-hint':
+          SentenceTypingView.toggleHint();
+          break;
+        case 'sentence-toggle-grammar':
+          SentenceTypingView.toggleGrammar();
+          break;
+        case 'sentence-check':
+          SentenceTypingView.check();
+          break;
+        case 'sentence-retry':
+          SentenceTypingView.retry();
+          break;
+        case 'sentence-prev':
+          SentenceTypingView.prev();
+          break;
+        case 'sentence-next':
+          SentenceTypingView.next();
+          break;
+
+        // 新增單字動作
+        case 'addword-save':
+          AddWordView.saveWord();
+          break;
+
+        // 設定動作
+        case 'add-new-lang':
+          SettingsView.addNewLang();
+          break;
+        case 'remove-user-lang':
+          Storage.removeUserLang(btn.dataset.lang);
+          router.refresh();
+          break;
+        case 'batch-fill-missing':
+          SettingsView.batchFillMissing();
+          break;
+        case 'save-gemini-key':
+          SettingsView.saveGeminiKey();
+          break;
+        case 'save-gas-url':
+          SettingsView.saveGasUrl();
+          break;
+        case 'save-gas-token':
+          SettingsView.saveGasToken();
+          break;
+        case 'pull-from-sheet':
+          SettingsView.pullFromSheet();
+          break;
+        case 'upload-srs-now':
+          SettingsView.uploadSrsNow();
+          break;
+        case 'export-backup':
+          SettingsView.exportBackup();
+          break;
+        case 'reset-srs-only':
+          SettingsView.resetSrsOnly();
+          break;
+        case 'clear-local-cache':
+          SettingsView.clearLocalCache();
+          break;
+        case 'reset-to-seed':
+          SettingsView.resetToSeed();
+          break;
+      }
+    });
+
+    document.addEventListener('change', (e) => {
+      const el = e.target.closest('[data-change]');
+      if (!el) return;
+      const change = el.dataset.change;
+
+      switch(change) {
+        case 'flashcard-category':
+          FlashcardView.changeCategory(el.value);
+          break;
+        case 'flashcard-mastery':
+          FlashcardView.changeMastery(el.value);
+          break;
+        case 'spelling-category':
+          SpellingView.changeCategory(el.value);
+          break;
+        case 'spelling-mastery':
+          SpellingView.changeMastery(el.value);
+          break;
+        case 'toggle-smart-guidance':
+          Storage.setSmartGuidanceEnabled(el.checked);
+          router.refresh();
+          break;
+        case 'toggle-ai-autofill':
+          Storage.setAiEnabled(el.checked);
+          router.refresh();
+          break;
+        case 'toggle-furigana-setting':
+          Storage.setFuriganaEnabled(el.checked);
+          break;
+        case 'toggle-es-gender-setting':
+          Storage.setEsGenderEnabled(el.checked);
+          break;
+        case 'toggle-lang-active':
+          Storage.toggleLangActive(el.dataset.lang);
+          router.refresh();
+          break;
+        case 'settings-volume':
+          Storage.setVolume(el.dataset.lang, el.value);
+          const lbl = document.getElementById(`vol-label-${el.dataset.lang}`);
+          if (lbl) lbl.textContent = `${Math.round(el.value * 100)}%`;
+          break;
+        case 'toggle-test-mode-setting':
+          Storage.setTestMode(el.checked);
+          router.refresh();
+          break;
+        case 'change-key-mode':
+          Storage.setKeyStorageMode(el.value);
+          router.refresh();
+          break;
+      }
+    });
+
+    // 啟動入口
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => router.init());
+    } else {
+      router.init();
+    }
+  </script>
+</body>
+</html>
