@@ -570,13 +570,29 @@
       },
 
       getCategories() {
-        return Security.safeJsonParse(localStorage.getItem(this.KEY_CATEGORIES), ["日常問候", "餐飲點餐", "社交場所", "職場商業", "旅遊會話"]);
+        // 動態提取詞庫（Google 試算表同步後）所有真實存在的分類，徹底排除未使用的舊預設分類
+        const vocab = this.getVocab();
+        const set = new Set();
+        vocab.forEach(w => {
+          if (w.category && typeof w.category === 'string') {
+            const trimmed = w.category.trim();
+            if (trimmed) set.add(trimmed);
+          }
+        });
+        
+        if (set.size > 0) {
+          return Array.from(set);
+        }
+
+        return ["通用"];
       },
       addCategory(cat) {
-        if (!cat) return;
+        if (!cat || typeof cat !== 'string') return;
+        const trimmed = cat.trim();
+        if (!trimmed) return;
         const cats = this.getCategories();
-        if (!cats.includes(cat)) {
-          cats.push(cat);
+        if (!cats.includes(trimmed)) {
+          cats.push(trimmed);
           localStorage.setItem(this.KEY_CATEGORIES, JSON.stringify(cats));
         }
       },
@@ -727,7 +743,10 @@ ${JSON.stringify(existingData, null, 2)}` }]
      */
     function filterVocabulary(vocabList, selectedCategory, selectedMastery, targetLangCode) {
       return vocabList.filter(word => {
-        if (selectedCategory !== 'ALL' && word.category !== selectedCategory) return false;
+        if (selectedCategory !== 'ALL') {
+          const wordCat = (word.category || '').trim();
+          if (wordCat !== selectedCategory.trim()) return false;
+        }
 
         if (selectedMastery !== 'ALL') {
           const srs = Storage.getLangSrs(word.id, targetLangCode || 'en');
@@ -767,6 +786,9 @@ ${JSON.stringify(existingData, null, 2)}` }]
       render() {
         const allVocab = Storage.getVocab();
         const categories = Storage.getCategories();
+        if (this.filterCategory !== 'ALL' && !categories.includes(this.filterCategory)) {
+          this.filterCategory = 'ALL';
+        }
         const activeLangs = Storage.getUserLangs().filter(l => Storage.isLangActive(l.code));
         const primaryLangCode = activeLangs[0]?.code || 'ja';
 
@@ -1070,6 +1092,9 @@ ${JSON.stringify(existingData, null, 2)}` }]
       render() {
         const allVocab = Storage.getVocab();
         const categories = Storage.getCategories();
+        if (this.filterCategory !== 'ALL' && !categories.includes(this.filterCategory)) {
+          this.filterCategory = 'ALL';
+        }
         const activeLangs = Storage.getUserLangs().filter(l => Storage.isLangActive(l.code));
 
         if (!Storage.isLangActive(this.activeLang) && activeLangs.length > 0) {
