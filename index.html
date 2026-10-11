@@ -506,10 +506,43 @@
         }
       },
 
-      getVocab() {
-        return Security.safeJsonParse(localStorage.getItem(this.KEY_VOCAB), INITIAL_VOCABULARY);
+      normalizeWord(w) {
+        if (!w) return w;
+        // 1. 若 pos 存於 targets.pos (來自 Google Apps Script 舊版映射)，自動正規化至 root
+        if (!w.pos && w.targets && w.targets.pos) {
+          w.pos = String(w.targets.pos).trim();
+          delete w.targets.pos;
+        }
+        // 2. 若依然無 pos，自動依 meta 註記智慧反推詞性
+        if (!w.pos) {
+          const m = (w.meta || (w.targets && w.targets.meta) || '').toString();
+          if (m.includes('名詞')) w.pos = '名詞';
+          else if (m.includes('動詞')) w.pos = '動詞';
+          else if (m.includes('形容詞')) w.pos = '形容詞';
+          else if (m.includes('副詞')) w.pos = '副詞';
+          else if (m.includes('感嘆詞') || m.includes('問候語')) w.pos = '感嘆詞';
+        }
+        // 3. 確保 meta 欄位亦不會遺留在 targets.meta
+        if (!w.meta && w.targets && w.targets.meta) {
+          w.meta = String(w.targets.meta).trim();
+          delete w.targets.meta;
+        }
+        return w;
       },
-      setVocab(list) { localStorage.setItem(this.KEY_VOCAB, JSON.stringify(list)); },
+
+      getVocab() {
+        const list = Security.safeJsonParse(localStorage.getItem(this.KEY_VOCAB), INITIAL_VOCABULARY);
+        if (Array.isArray(list)) {
+          list.forEach(w => this.normalizeWord(w));
+        }
+        return list;
+      },
+      setVocab(list) {
+        if (Array.isArray(list)) {
+          list.forEach(w => this.normalizeWord(w));
+        }
+        localStorage.setItem(this.KEY_VOCAB, JSON.stringify(list));
+      },
       addWord(wordObj) {
         const vocab = this.getVocab();
         vocab.unshift(wordObj);
@@ -570,7 +603,7 @@
       },
 
       getCategories() {
-        // 動態提取詞庫（Google 試算表同步後）所有真實存在的分類，徹底排除未使用的舊預設分類
+        // 動態提取詞庫（Google 試算表同步後）所有真實存在的情境分類
         const vocab = this.getVocab();
         const set = new Set();
         vocab.forEach(w => {
@@ -579,12 +612,20 @@
             if (trimmed) set.add(trimmed);
           }
         });
-        
-        if (set.size > 0) {
-          return Array.from(set);
-        }
+        return set.size > 0 ? Array.from(set) : ["通用"];
+      },
 
-        return ["通用"];
+      getPosList() {
+        // 動態提取詞庫（Google 試算表同步後）所有真實存在的詞性標籤
+        const vocab = this.getVocab();
+        const set = new Set();
+        vocab.forEach(w => {
+          if (w.pos && typeof w.pos === 'string') {
+            const trimmed = w.pos.trim();
+            if (trimmed) set.add(trimmed);
+          }
+        });
+        return set.size > 0 ? Array.from(set) : ["名詞", "動詞", "形容詞", "副詞", "感嘆詞"];
       },
       addCategory(cat) {
         if (!cat || typeof cat !== 'string') return;
@@ -741,11 +782,17 @@ ${JSON.stringify(existingData, null, 2)}` }]
     /**
      * 6. 通用過濾器
      */
-    function filterVocabulary(vocabList, selectedCategory, selectedMastery, targetLangCode) {
+    function filterVocabulary(vocabList, selectedCategory, selectedPos, selectedMastery, targetLangCode) {
       return vocabList.filter(word => {
         if (selectedCategory !== 'ALL') {
           const wordCat = (word.category || '').trim();
           if (wordCat !== selectedCategory.trim()) return false;
+        }
+
+        if (selectedPos && selectedPos !== 'ALL') {
+          const wordPos = (word.pos || '').trim();
+          const sel = selectedPos.trim();
+          if (wordPos !== sel && !wordPos.includes(sel) && !sel.includes(wordPos)) return false;
         }
 
         if (selectedMastery !== 'ALL') {
@@ -778,6 +825,7 @@ ${JSON.stringify(existingData, null, 2)}` }]
     const FlashcardView = {
       currentIndex: 0,
       filterCategory: 'ALL',
+      filterPos: 'ALL',
       filterMastery: 'ALL',
       revealedState: {},
       revealedZh: false,
@@ -786,26 +834,34 @@ ${JSON.stringify(existingData, null, 2)}` }]
       render() {
         const allVocab = Storage.getVocab();
         const categories = Storage.getCategories();
+        const posList = Storage.getPosList();
         if (this.filterCategory !== 'ALL' && !categories.includes(this.filterCategory)) {
           this.filterCategory = 'ALL';
+        }
+        if (this.filterPos !== 'ALL' && !posList.includes(this.filterPos)) {
+          this.filterPos = 'ALL';
         }
         const activeLangs = Storage.getUserLangs().filter(l => Storage.isLangActive(l.code));
         const primaryLangCode = activeLangs[0]?.code || 'ja';
 
-        const filteredVocab = filterVocabulary(allVocab, this.filterCategory, this.filterMastery, primaryLangCode);
+        const filteredVocab = filterVocabulary(allVocab, this.filterCategory, this.filterPos, this.filterMastery, primaryLangCode);
 
         const filterBarHtml = `
-          <div class="flex items-center gap-2 mb-3 bg-slate-950/70 p-2 rounded-xl border border-slate-800 text-xs">
-            <select data-change="flashcard-category" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-white">
-              <option value="ALL" ${this.filterCategory === 'ALL' ? 'selected' : ''}>📁 全部分類</option>
+          <div class="grid grid-cols-3 gap-1.5 mb-3 bg-slate-950/70 p-2 rounded-xl border border-slate-800 text-xs">
+            <select data-change="flashcard-category" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-white truncate">
+              <option value="ALL" ${this.filterCategory === 'ALL' ? 'selected' : ''}>📁 情境</option>
               ${categories.map(c => `<option value="${Security.escape(c)}" ${this.filterCategory === c ? 'selected' : ''}>${Security.escape(c)}</option>`).join('')}
             </select>
-            <select data-change="flashcard-mastery" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-white">
-              <option value="ALL" ${this.filterMastery === 'ALL' ? 'selected' : ''}>🎯 全部熟練度</option>
-              <option value="DUE" ${this.filterMastery === 'DUE' ? 'selected' : ''}>⚠️ 今日待複習</option>
-              <option value="NEW" ${this.filterMastery === 'NEW' ? 'selected' : ''}>🌱 尚未評級</option>
-              <option value="LEARNING" ${this.filterMastery === 'LEARNING' ? 'selected' : ''}>📖 學習中 (1~6天)</option>
-              <option value="MASTERED" ${this.filterMastery === 'MASTERED' ? 'selected' : ''}>🌟 已熟記 (>6天)</option>
+            <select data-change="flashcard-pos" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-white truncate">
+              <option value="ALL" ${this.filterPos === 'ALL' ? 'selected' : ''}>🏷️ 詞性</option>
+              ${posList.map(p => `<option value="${Security.escape(p)}" ${this.filterPos === p ? 'selected' : ''}>${Security.escape(p)}</option>`).join('')}
+            </select>
+            <select data-change="flashcard-mastery" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-white truncate">
+              <option value="ALL" ${this.filterMastery === 'ALL' ? 'selected' : ''}>🎯 熟練度</option>
+              <option value="DUE" ${this.filterMastery === 'DUE' ? 'selected' : ''}>⚠️ 待複習</option>
+              <option value="NEW" ${this.filterMastery === 'NEW' ? 'selected' : ''}>🌱 新單字</option>
+              <option value="LEARNING" ${this.filterMastery === 'LEARNING' ? 'selected' : ''}>📖 學習中</option>
+              <option value="MASTERED" ${this.filterMastery === 'MASTERED' ? 'selected' : ''}>🌟 已熟記</option>
             </select>
           </div>
         `;
@@ -971,9 +1027,15 @@ ${JSON.stringify(existingData, null, 2)}` }]
 
             <div class="bg-gradient-to-br from-indigo-950/70 to-slate-800 border border-indigo-500/30 rounded-2xl p-4 shadow-lg relative space-y-2.5">
               <div class="flex justify-between items-center text-xs text-indigo-300">
-                <div class="flex items-center gap-1.5">
-                  <span class="font-semibold uppercase tracking-wider">${Security.escape(word.category || '通用')}</span>
-                  ${word.pos ? `<span class="bg-indigo-900/80 text-indigo-300 border border-indigo-500/40 px-1.5 py-0.5 rounded text-[10px] font-medium">${Security.escape(word.pos)}</span>` : ''}
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span class="bg-indigo-950/80 text-indigo-300 border border-indigo-500/40 px-2 py-0.5 rounded-lg text-xs font-semibold flex items-center gap-1 shadow-sm">
+                    <span>📁</span> <span>${Security.escape(word.category || '通用')}</span>
+                  </span>
+                  ${word.pos ? `
+                    <span class="bg-amber-950/80 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-lg text-xs font-semibold flex items-center gap-1 shadow-sm">
+                      <span>🏷️</span> <span>${Security.escape(word.pos)}</span>
+                    </span>
+                  ` : ''}
                 </div>
                 <div class="flex items-center gap-2">
                   <button data-action="toggle-es-gender" class="text-[10px] ${Storage.isEsGenderEnabled() ? 'text-pink-300' : 'text-slate-500'} hover:text-white underline">
@@ -1037,8 +1099,9 @@ ${JSON.stringify(existingData, null, 2)}` }]
       },
 
       changeCategory(c) { this.filterCategory = c; this.currentIndex = 0; router.refresh(); },
+      changePos(p) { this.filterPos = p; this.currentIndex = 0; router.refresh(); },
       changeMastery(m) { this.filterMastery = m; this.currentIndex = 0; router.refresh(); },
-      resetFilter() { this.filterCategory = 'ALL'; this.filterMastery = 'ALL'; router.refresh(); },
+      resetFilter() { this.filterCategory = 'ALL'; this.filterPos = 'ALL'; this.filterMastery = 'ALL'; router.refresh(); },
       revealZh() { this.revealedZh = true; router.refresh(); },
       togglePhonetics() { this.showPhonetics = !this.showPhonetics; router.refresh(); },
 
@@ -1083,6 +1146,7 @@ ${JSON.stringify(existingData, null, 2)}` }]
     const SpellingView = {
       currentIndex: 0,
       filterCategory: 'ALL',
+      filterPos: 'ALL',
       filterMastery: 'ALL',
       mode: 'readWrite',
       activeLang: 'ja',
@@ -1092,8 +1156,12 @@ ${JSON.stringify(existingData, null, 2)}` }]
       render() {
         const allVocab = Storage.getVocab();
         const categories = Storage.getCategories();
+        const posList = Storage.getPosList();
         if (this.filterCategory !== 'ALL' && !categories.includes(this.filterCategory)) {
           this.filterCategory = 'ALL';
+        }
+        if (this.filterPos !== 'ALL' && !posList.includes(this.filterPos)) {
+          this.filterPos = 'ALL';
         }
         const activeLangs = Storage.getUserLangs().filter(l => Storage.isLangActive(l.code));
 
@@ -1101,20 +1169,24 @@ ${JSON.stringify(existingData, null, 2)}` }]
           this.activeLang = activeLangs[0].code;
         }
 
-        const filteredVocab = filterVocabulary(allVocab, this.filterCategory, this.filterMastery, this.activeLang);
+        const filteredVocab = filterVocabulary(allVocab, this.filterCategory, this.filterPos, this.filterMastery, this.activeLang);
 
         const filterBarHtml = `
-          <div class="flex items-center gap-2 mb-2 bg-slate-950/70 p-2 rounded-xl border border-slate-800 text-xs">
-            <select data-change="spelling-category" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white">
-              <option value="ALL" ${this.filterCategory === 'ALL' ? 'selected' : ''}>📁 全部分類</option>
+          <div class="grid grid-cols-3 gap-1.5 mb-2 bg-slate-950/70 p-2 rounded-xl border border-slate-800 text-xs">
+            <select data-change="spelling-category" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white truncate">
+              <option value="ALL" ${this.filterCategory === 'ALL' ? 'selected' : ''}>📁 情境</option>
               ${categories.map(c => `<option value="${Security.escape(c)}" ${this.filterCategory === c ? 'selected' : ''}>${Security.escape(c)}</option>`).join('')}
             </select>
-            <select data-change="spelling-mastery" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white">
-              <option value="ALL" ${this.filterMastery === 'ALL' ? 'selected' : ''}>🎯 全部熟練度</option>
-              <option value="DUE" ${this.filterMastery === 'DUE' ? 'selected' : ''}>⚠️ 今日待複習</option>
-              <option value="NEW" ${this.filterMastery === 'NEW' ? 'selected' : ''}>🌱 尚未評級</option>
-              <option value="LEARNING" ${this.filterMastery === 'LEARNING' ? 'selected' : ''}>📖 學習中 (1~6天)</option>
-              <option value="MASTERED" ${this.filterMastery === 'MASTERED' ? 'selected' : ''}>🌟 已熟記 (>6天)</option>
+            <select data-change="spelling-pos" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white truncate">
+              <option value="ALL" ${this.filterPos === 'ALL' ? 'selected' : ''}>🏷️ 詞性</option>
+              ${posList.map(p => `<option value="${Security.escape(p)}" ${this.filterPos === p ? 'selected' : ''}>${Security.escape(p)}</option>`).join('')}
+            </select>
+            <select data-change="spelling-mastery" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white truncate">
+              <option value="ALL" ${this.filterMastery === 'ALL' ? 'selected' : ''}>🎯 熟練度</option>
+              <option value="DUE" ${this.filterMastery === 'DUE' ? 'selected' : ''}>⚠️ 待複習</option>
+              <option value="NEW" ${this.filterMastery === 'NEW' ? 'selected' : ''}>🌱 新單字</option>
+              <option value="LEARNING" ${this.filterMastery === 'LEARNING' ? 'selected' : ''}>📖 學習中</option>
+              <option value="MASTERED" ${this.filterMastery === 'MASTERED' ? 'selected' : ''}>🌟 已熟記</option>
             </select>
           </div>
         `;
@@ -1144,11 +1216,11 @@ ${JSON.stringify(existingData, null, 2)}` }]
 
         const currentLangConfig = activeLangs.find(l => l.code === this.activeLang) || activeLangs[0];
         const correctTarget = (word.targets && word.targets[currentLangConfig.code]) || '';
+        const phonetic = (word.phonetics && word.phonetics[currentLangConfig.code]) || '';
         let rubyText = (word.ruby && word.ruby[currentLangConfig.code]) || (currentLangConfig.code === 'ja' ? KanaHelper.buildRuby(correctTarget, phonetic) : correctTarget);
         if (currentLangConfig.code === 'ja' && !Storage.isFuriganaEnabled()) {
           rubyText = rubyText.replace(/<rt>.*?<\/rt>/g, '').replace(/<\/?ruby>/g, '');
         }
-        const phonetic = (word.phonetics && word.phonetics[currentLangConfig.code]) || '';
         const currentResult = this.results[currentLangConfig.code] || {};
 
         return `
@@ -1173,9 +1245,15 @@ ${JSON.stringify(existingData, null, 2)}` }]
             </div>
 
             <div class="bg-slate-800/90 border border-slate-700 rounded-2xl p-5 text-center space-y-1">
-              <div class="flex items-center justify-center gap-1.5 text-xs text-indigo-400 font-medium">
-                <span>${Security.escape(word.category || '通用')}</span>
-                ${word.pos ? `<span class="bg-indigo-900/60 text-indigo-300 border border-indigo-700/50 px-1 rounded text-[10px]">${Security.escape(word.pos)}</span>` : ''}
+              <div class="flex items-center justify-center gap-2 flex-wrap text-xs">
+                <span class="bg-indigo-950/80 text-indigo-300 border border-indigo-500/40 px-2 py-0.5 rounded-lg text-xs font-semibold flex items-center gap-1">
+                  <span>📁</span> <span>${Security.escape(word.category || '通用')}</span>
+                </span>
+                ${word.pos ? `
+                  <span class="bg-amber-950/80 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-lg text-xs font-semibold flex items-center gap-1">
+                    <span>🏷️</span> <span>${Security.escape(word.pos)}</span>
+                  </span>
+                ` : ''}
               </div>
               
               ${this.mode === 'readWrite' ? `
@@ -1247,8 +1325,9 @@ ${JSON.stringify(existingData, null, 2)}` }]
       },
 
       changeCategory(c) { this.filterCategory = c; this.currentIndex = 0; this.results = {}; router.refresh(); },
+      changePos(p) { this.filterPos = p; this.currentIndex = 0; this.results = {}; router.refresh(); },
       changeMastery(m) { this.filterMastery = m; this.currentIndex = 0; this.results = {}; router.refresh(); },
-      resetFilter() { this.filterCategory = 'ALL'; this.filterMastery = 'ALL'; router.refresh(); },
+      resetFilter() { this.filterCategory = 'ALL'; this.filterPos = 'ALL'; this.filterMastery = 'ALL'; router.refresh(); },
       toggleHint() { this.showHint = true; router.refresh(); },
       setSubMode(m) { this.mode = m; this.results = {}; this.showHint = false; router.refresh(); },
       selectLang(code) { this.activeLang = code; this.results = {}; this.showHint = false; router.refresh(); },
@@ -1736,9 +1815,9 @@ ${JSON.stringify(existingData, null, 2)}` }]
                   </select>
                 </div>
                 <div class="space-y-1">
-                  <label class="block text-xs font-semibold text-slate-300">詞性 (選填)</label>
-                  <input type="text" id="input_pos" placeholder="名詞 / 動詞 (留白由 AI 判斷)" 
-                    class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500" />
+                  <label class="block text-xs font-semibold text-amber-300">詞性標籤</label>
+                  <input type="text" id="input_pos" placeholder="如：名詞 / 動詞 (留白由 AI 自動判定)" 
+                    class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-amber-500" />
                 </div>
               </div>
 
@@ -2243,6 +2322,18 @@ ${JSON.stringify(existingData, null, 2)}` }]
 
           if (!Array.isArray(sheetWords) || sheetWords.length === 0) throw new Error('試算表中未發現有效單字');
 
+          // 自動映射 pos 與 meta 欄位 (確保無論 Apps Script 新舊版均能無縫支援詞性)
+          sheetWords.forEach(w => {
+            if (!w.pos && w.targets && w.targets.pos) {
+              w.pos = w.targets.pos;
+              delete w.targets.pos;
+            }
+            if (!w.meta && w.targets && w.targets.meta) {
+              w.meta = w.targets.meta;
+              delete w.targets.meta;
+            }
+          });
+
           Storage.setVocab(sheetWords);
           alert(`同步成功！已成功自試算表拉取 ${sheetWords.length} 筆單字。`);
         } catch (err) {
@@ -2508,6 +2599,25 @@ ${JSON.stringify(existingData, null, 2)}` }]
       }
     });
 
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const input = document.getElementById('spellingInput');
+        if (input && document.activeElement === input) {
+          e.preventDefault();
+          const activeLangs = Storage.getUserLangs().filter(l => Storage.isLangActive(l.code));
+          const currentLang = activeLangs.find(l => l.code === SpellingView.activeLang) || activeLangs[0];
+          const curRes = SpellingView.results[currentLang.code];
+          const allVocab = Storage.getVocab();
+          const filtered = filterVocabulary(allVocab, SpellingView.filterCategory, SpellingView.filterMastery, currentLang.code);
+          if (curRes && curRes.isChecked) {
+            SpellingView.next(filtered.length);
+          } else {
+            SpellingView.check();
+          }
+        }
+      }
+    });
+
     document.addEventListener('change', (e) => {
       const el = e.target.closest('[data-change]');
       if (!el) return;
@@ -2517,11 +2627,17 @@ ${JSON.stringify(existingData, null, 2)}` }]
         case 'flashcard-category':
           FlashcardView.changeCategory(el.value);
           break;
+        case 'flashcard-pos':
+          FlashcardView.changePos(el.value);
+          break;
         case 'flashcard-mastery':
           FlashcardView.changeMastery(el.value);
           break;
         case 'spelling-category':
           SpellingView.changeCategory(el.value);
+          break;
+        case 'spelling-pos':
+          SpellingView.changePos(el.value);
           break;
         case 'spelling-mastery':
           SpellingView.changeMastery(el.value);
