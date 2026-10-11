@@ -252,42 +252,840 @@
     ];
 
     const INITIAL_VOCABULARY = [
-      {
-        id: "w_001",
-        category: "生活物品",
-        pos: "名詞",
-        baseWord: "book",
-        meaningZh: "書本",
-        targets: { ja: "本", es: "el libro" },
-        ruby: { ja: "<ruby>本<rt>ほん</rt></ruby>" },
-        phonetics: { ja: "hon", es: "el li-bro" },
-        meta: "陽性名詞 (el)"
-      },
-      {
-        id: "w_002",
-        category: "生活物品",
-        pos: "名詞",
-        baseWord: "table",
-        meaningZh: "桌子",
-        targets: { ja: "机", es: "la mesa" },
-        ruby: { ja: "<ruby>机<rt>つくえ</rt></ruby>" },
-        phonetics: { ja: "tsukue", es: "la me-sa" },
-        meta: "陰性名詞 (la)"
-      },
-      {
-        id: "w_003",
-        category: "日常動作",
-        pos: "動詞",
-        baseWord: "to eat",
-        meaningZh: "吃",
-        targets: { ja: "食べます", es: "comer" },
-        ruby: { ja: "<ruby>食<rt>た</rt></ruby>べます" },
-        ja_plain: "食べる",
-        ja_plain_ruby: "<ruby>食<rt>た</rt></ruby>べる",
-        phonetics: { ja: "tabemasu", es: "ko-mer" },
-        meta: "動詞・禮貌/常體雙軌"
-      }
-    ];
+  {
+    "id": "w_001",
+    "category": "日常動作",
+    "pos": "動詞",
+    "source": "",
+    "baseWord": "to eat",
+    "meaningZh": "吃",
+    "targets": {
+      "ja": "食べる",
+      "es": "comer"
+    },
+    "phonetics": {
+      "ja": "taberu",
+      "es": "ko-mer"
+    },
+    "meta": "[動詞・原形]"
+  },
+  {
+    "id": "w_002",
+    "category": "生活物品",
+    "pos": "名詞",
+    "source": "",
+    "baseWord": "book",
+    "meaningZh": "書本",
+    "targets": {
+      "ja": "本",
+      "es": "el libro"
+    },
+    "phonetics": {
+      "ja": "hon",
+      "es": "el li-bro"
+    },
+    "meta": "[陽性名詞 (el)]"
+  },
+  {
+    "id": "w_003",
+    "category": "生活物品",
+    "pos": "名詞",
+    "source": "",
+    "baseWord": "table",
+    "meaningZh": "桌子",
+    "targets": {
+      "ja": "机",
+      "es": "la mesa"
+    },
+    "phonetics": {
+      "ja": "tsukue",
+      "es": "la me-sa"
+    },
+    "meta": "[陰性名詞 (la)]"
+  },
+  {
+    "id": "w_004",
+    "category": "生活飲食",
+    "pos": "名詞",
+    "source": "",
+    "baseWord": "water",
+    "meaningZh": "水",
+    "targets": {
+      "ja": "水",
+      "es": "el agua"
+    },
+    "phonetics": {
+      "ja": "mizu",
+      "es": "el a-gua"
+    },
+    "meta": "[陰性名詞 (el)]"
+  },
+  {
+    "id": "w_005",
+    "category": "日常問候",
+    "pos": "感嘆詞",
+    "source": "",
+    "baseWord": "good morning",
+    "meaningZh": "早安",
+    "targets": {
+      "ja": "おはようございます",
+      "es": "buenos días"
+    },
+    "phonetics": {
+      "ja": "ohayou gozaimasu (常體: おはよう)",
+      "es": "bwe-nos di-as"
+    },
+    "meta": "[問候語]"
+  },
+  {
+    "id": "w_006",
+    "category": "日常問候",
+    "pos": "感嘆詞",
+    "source": "",
+    "baseWord": "good afternoon",
+    "meaningZh": "午安",
+    "targets": {
+      "ja": "こんにちは",
+      "es": "buenas tardes"
+    },
+    "phonetics": {
+      "ja": "konnichiwa",
+      "es": "bwe-nas tar-des"
+    },
+    "meta": "[問候語]"
+  },
+  {
+    "id": "w_007",
+    "category": "日常問候",
+    "pos": "感嘆詞",
+    "source": "",
+    "baseWord": "good evening",
+    "meaningZh": "晚安",
+    "targets": {
+      "ja": "こんばんは",
+      "es": "buenas noches"
+    },
+    "phonetics": {
+      "ja": "konbanwa",
+      "es": "bwe-nas no-ches"
+    },
+    "meta": "[問候語]"
+  },
+  {
+    "id": "w_008",
+    "category": "日常社交",
+    "pos": "感嘆詞",
+    "source": "",
+    "baseWord": "see you later",
+    "meaningZh": "待會見 / 再見",
+    "targets": {
+      "ja": "またね",
+      "es": "hasta luego"
+    },
+    "phonetics": {
+      "ja": "matane (禮貌: では、また)",
+      "es": "as-ta lwe-go"
+    },
+    "meta": "[問候語・常體]"
+  },
+  {
+    "id": "w_009",
+    "category": "日常社交",
+    "pos": "感嘆詞",
+    "source": "",
+    "baseWord": "pleased to meet you (male)",
+    "meaningZh": "很高興認識你（男用）",
+    "targets": {
+      "ja": "はじめまして",
+      "es": "encantado"
+    },
+    "phonetics": {
+      "ja": "hajimemashite",
+      "es": "en-kan-ta-do"
+    },
+    "meta": "[社交用語・陽性]"
+  },
+  {
+    "id": "w_010",
+    "category": "日常社交",
+    "pos": "感嘆詞",
+    "source": "",
+    "baseWord": "pleased to meet you (female)",
+    "meaningZh": "很高興認識你（女用）",
+    "targets": {
+      "ja": "はじめまして",
+      "es": "encantada"
+    },
+    "phonetics": {
+      "ja": "hajimemashite",
+      "es": "en-kan-ta-da"
+    },
+    "meta": "[社交用語・陰性]"
+  },
+  {
+    "id": "w_011",
+    "category": "數學運算",
+    "pos": "動詞",
+    "source": "",
+    "baseWord": "to add",
+    "meaningZh": "加 / 加法",
+    "targets": {
+      "ja": "足す",
+      "es": "sumar"
+    },
+    "phonetics": {
+      "ja": "tasu",
+      "es": "su-mar"
+    },
+    "meta": "[動詞・原形]"
+  },
+  {
+    "id": "w_012",
+    "category": "數學運算",
+    "pos": "動詞",
+    "source": "",
+    "baseWord": "to subtract",
+    "meaningZh": "減 / 減法",
+    "targets": {
+      "ja": "引く",
+      "es": "restar"
+    },
+    "phonetics": {
+      "ja": "hiku",
+      "es": "res-tar"
+    },
+    "meta": "[動詞・原形]"
+  },
+  {
+    "id": "w_013",
+    "category": "數學運算",
+    "pos": "動詞",
+    "source": "",
+    "baseWord": "to multiply",
+    "meaningZh": "乘 / 乘法",
+    "targets": {
+      "ja": "掛ける",
+      "es": "multiplicar"
+    },
+    "phonetics": {
+      "ja": "kakeru",
+      "es": "mul-ti-pli-car"
+    },
+    "meta": "[動詞・原形]"
+  },
+  {
+    "id": "w_014",
+    "category": "數學運算",
+    "pos": "動詞",
+    "source": "",
+    "baseWord": "to divide",
+    "meaningZh": "除 / 除法",
+    "targets": {
+      "ja": "割る",
+      "es": "dividir"
+    },
+    "phonetics": {
+      "ja": "waru",
+      "es": "di-vi-dir"
+    },
+    "meta": "[動詞・原形]"
+  },
+  {
+    "id": "w_015",
+    "category": "數量單位",
+    "pos": "名詞",
+    "source": "",
+    "baseWord": "one person",
+    "meaningZh": "一人 / 一位",
+    "targets": {
+      "ja": "一人",
+      "es": "una persona"
+    },
+    "phonetics": {
+      "ja": "hitori",
+      "es": "u-na per-so-na"
+    },
+    "meta": "[量詞/名詞・陰性 (una)]"
+  },
+  {
+    "id": "w_016",
+    "category": "數量單位",
+    "pos": "名詞",
+    "source": "",
+    "baseWord": "two people",
+    "meaningZh": "兩人 / 兩位",
+    "targets": {
+      "ja": "二人",
+      "es": "dos personas"
+    },
+    "phonetics": {
+      "ja": "futari",
+      "es": "dos per-so-nas"
+    },
+    "meta": "[量詞/名詞]"
+  },
+  {
+    "id": "w_017",
+    "category": "數量單位",
+    "pos": "名詞",
+    "source": "",
+    "baseWord": "number...",
+    "meaningZh": "…號 / …番",
+    "targets": {
+      "ja": "〜番",
+      "es": "el número"
+    },
+    "phonetics": {
+      "ja": "ban",
+      "es": "el nu-me-ro"
+    },
+    "meta": "[量詞/陽性名詞 (el)]"
+  },
+  {
+    "id": "w_018",
+    "category": "數量單位",
+    "pos": "名詞",
+    "source": "",
+    "baseWord": "counter for machines/vehicles",
+    "meaningZh": "…台 / …輛",
+    "targets": {
+      "ja": "〜台",
+      "es": "la unidad"
+    },
+    "phonetics": {
+      "ja": "dai",
+      "es": "la u-ni-dad"
+    },
+    "meta": "[量詞/陰性名詞 (la)]"
+  },
+  {
+    "id": "w_019",
+    "category": "人稱代詞",
+    "pos": "代名詞",
+    "source": "初01",
+    "baseWord": "I / me",
+    "meaningZh": "我",
+    "targets": {
+      "ja": "私",
+      "es": "yo"
+    },
+    "phonetics": {
+      "ja": "watashi",
+      "es": "yo"
+    },
+    "meta": "[代名詞]"
+  },
+  {
+    "id": "w_020",
+    "category": "人稱代詞",
+    "pos": "代名詞",
+    "source": "初01",
+    "baseWord": "you",
+    "meaningZh": "你",
+    "targets": {
+      "ja": "貴方",
+      "es": "tú"
+    },
+    "phonetics": {
+      "ja": "anata",
+      "es": "tu"
+    },
+    "meta": "[代名詞]"
+  },
+  {
+    "id": "w_021",
+    "category": "人稱代詞",
+    "pos": "代名詞",
+    "source": "初01",
+    "baseWord": "that person",
+    "meaningZh": "那個人",
+    "targets": {
+      "ja": "あの人",
+      "es": "aquella persona"
+    },
+    "phonetics": {
+      "ja": "ano hito (禮貌: あの方 / あのかた)",
+      "es": "a-kye-ya per-so-na"
+    },
+    "meta": "[代名詞/名詞短語]"
+  },
+  {
+    "id": "w_022",
+    "category": "人稱代詞",
+    "pos": "代名詞",
+    "source": "初01",
+    "baseWord": "he / him",
+    "meaningZh": "他",
+    "targets": {
+      "ja": "彼",
+      "es": "él"
+    },
+    "phonetics": {
+      "ja": "kare",
+      "es": "el"
+    },
+    "meta": "[代名詞・陽性]"
+  },
+  {
+    "id": "w_023",
+    "category": "人稱代詞",
+    "pos": "代名詞",
+    "source": "初01",
+    "baseWord": "she / her",
+    "meaningZh": "她",
+    "targets": {
+      "ja": "彼女",
+      "es": "ella"
+    },
+    "phonetics": {
+      "ja": "kanojo",
+      "es": "e-ya"
+    },
+    "meta": "[代名詞・陰性]"
+  },
+  {
+    "id": "w_024",
+    "category": "身分職業",
+    "pos": "名詞",
+    "source": "初01",
+    "baseWord": "student",
+    "meaningZh": "學生",
+    "targets": {
+      "ja": "学生",
+      "es": "el estudiante"
+    },
+    "phonetics": {
+      "ja": "gakusei",
+      "es": "el es-tu-dian-te"
+    },
+    "meta": "[陽性名詞 (el)]"
+  },
+  {
+    "id": "w_025",
+    "category": "身分職業",
+    "pos": "名詞",
+    "source": "初01",
+    "baseWord": "high school student",
+    "meaningZh": "高中生",
+    "targets": {
+      "ja": "高校生",
+      "es": "el estudiante de secundaria"
+    },
+    "phonetics": {
+      "ja": "koukousei",
+      "es": "el es-tu-dian-te de se-kun-da-rya"
+    },
+    "meta": "[陽性名詞 (el)]"
+  },
+  {
+    "id": "w_026",
+    "category": "身分職業",
+    "pos": "名詞",
+    "source": "初01",
+    "baseWord": "office worker",
+    "meaningZh": "公司職員 / 上班族",
+    "targets": {
+      "ja": "会社員",
+      "es": "el oficinista"
+    },
+    "phonetics": {
+      "ja": "kaishain",
+      "es": "el o-fi-si-nis-ta"
+    },
+    "meta": "[陽性名詞 (el)]"
+  },
+  {
+    "id": "w_027",
+    "category": "身分職業",
+    "pos": "名詞",
+    "source": "初01",
+    "baseWord": "employee",
+    "meaningZh": "員工 / 職員",
+    "targets": {
+      "ja": "社員",
+      "es": "el empleado"
+    },
+    "phonetics": {
+      "ja": "shain",
+      "es": "el em-ple-a-do"
+    },
+    "meta": "[陽性名詞 (el)]"
+  },
+  {
+    "id": "w_028",
+    "category": "身分職業",
+    "pos": "名詞",
+    "source": "初01",
+    "baseWord": "colleague / coworker",
+    "meaningZh": "同事",
+    "targets": {
+      "ja": "同僚",
+      "es": "el colega"
+    },
+    "phonetics": {
+      "ja": "douryou",
+      "es": "el ko-le-ga"
+    },
+    "meta": "[陽性名詞 (el)]"
+  },
+  {
+    "id": "w_029",
+    "category": "身分職業",
+    "pos": "名詞",
+    "source": "初01",
+    "baseWord": "housewife",
+    "meaningZh": "家庭主婦",
+    "targets": {
+      "ja": "主婦",
+      "es": "el ama de casa"
+    },
+    "phonetics": {
+      "ja": "shufu",
+      "es": "el a-ma de ka-sa"
+    },
+    "meta": "[陰性名詞 (el)]"
+  },
+  {
+    "id": "w_030",
+    "category": "生活人文",
+    "pos": "名詞",
+    "source": "初01",
+    "baseWord": "country / homeland",
+    "meaningZh": "國家 / 故鄉",
+    "targets": {
+      "ja": "お国",
+      "es": "el país"
+    },
+    "phonetics": {
+      "ja": "okuni (常體: 国 / くに)",
+      "es": "el pa-is"
+    },
+    "meta": "[陽性名詞 (el)]"
+  },
+  {
+    "id": "w_031",
+    "category": "身分國籍",
+    "pos": "名詞",
+    "source": "初01",
+    "baseWord": "Japanese person",
+    "meaningZh": "日本人",
+    "targets": {
+      "ja": "日本人",
+      "es": "el japonés"
+    },
+    "phonetics": {
+      "ja": "nihonjin",
+      "es": "el ha-po-nes"
+    },
+    "meta": "[陽性名詞 (el)]"
+  },
+  {
+    "id": "w_032",
+    "category": "身分國籍",
+    "pos": "名詞",
+    "source": "初01",
+    "baseWord": "American person",
+    "meaningZh": "美國人",
+    "targets": {
+      "ja": "アメリカ人",
+      "es": "el estadounidense"
+    },
+    "phonetics": {
+      "ja": "amerikajin",
+      "es": "el es-ta-dou-ni-den-se"
+    },
+    "meta": "[陽性名詞 (el)]"
+  },
+  {
+    "id": "w_033",
+    "category": "個人資訊",
+    "pos": "名詞",
+    "source": "初01",
+    "baseWord": "name",
+    "meaningZh": "名字 / 姓名",
+    "targets": {
+      "ja": "お名前",
+      "es": "el nombre"
+    },
+    "phonetics": {
+      "ja": "onamae (常體: 名前 / なまえ)",
+      "es": "el nom-bre"
+    },
+    "meta": "[陽性名詞 (el)]"
+  },
+  {
+    "id": "w_034",
+    "category": "社會組織",
+    "pos": "名詞",
+    "source": "初01",
+    "baseWord": "company",
+    "meaningZh": "公司",
+    "targets": {
+      "ja": "会社",
+      "es": "la empresa"
+    },
+    "phonetics": {
+      "ja": "kaisha",
+      "es": "la em-pre-sa"
+    },
+    "meta": "[陰性名詞 (la)]"
+  },
+  {
+    "id": "w_035",
+    "category": "社會組織",
+    "pos": "名詞",
+    "source": "初01",
+    "baseWord": "trading company",
+    "meaningZh": "貿易公司",
+    "targets": {
+      "ja": "貿易会社",
+      "es": "la empresa comercial"
+    },
+    "phonetics": {
+      "ja": "bouekigaisha",
+      "es": "la em-pre-sa ko-mer-syal"
+    },
+    "meta": "[陰性名詞 (la)]"
+  },
+  {
+    "id": "w_036",
+    "category": "生活用品",
+    "pos": "名詞",
+    "source": "初01",
+    "baseWord": "mobile phone",
+    "meaningZh": "手機 / 行動電話",
+    "targets": {
+      "ja": "携帯電話",
+      "es": "el teléfono móvil"
+    },
+    "phonetics": {
+      "ja": "keitai denwa (簡稱: ケータイ)",
+      "es": "el te-le-fo-no mo-vil"
+    },
+    "meta": "[陽性名詞 (el)]"
+  },
+  {
+    "id": "w_037",
+    "category": "生活實用",
+    "pos": "名詞",
+    "source": "初01",
+    "baseWord": "number",
+    "meaningZh": "號碼",
+    "targets": {
+      "ja": "番号",
+      "es": "el número"
+    },
+    "phonetics": {
+      "ja": "bangou",
+      "es": "el nu-me-ro"
+    },
+    "meta": "[陽性名詞 (el)]"
+  },
+  {
+    "id": "w_038",
+    "category": "疑問詞",
+    "pos": "疑問詞",
+    "source": "初01",
+    "baseWord": "what number",
+    "meaningZh": "幾號 / 哪一號",
+    "targets": {
+      "ja": "何番",
+      "es": "qué número"
+    },
+    "phonetics": {
+      "ja": "nanban",
+      "es": "ke nu-me-ro"
+    },
+    "meta": "[疑問詞/數量詞]"
+  },
+  {
+    "id": "w_039",
+    "category": "疑問詞",
+    "pos": "疑問詞",
+    "source": "初01",
+    "baseWord": "who",
+    "meaningZh": "誰",
+    "targets": {
+      "ja": "誰",
+      "es": "quién"
+    },
+    "phonetics": {
+      "ja": "dare (禮貌: どなた)",
+      "es": "kyen"
+    },
+    "meta": "[疑問詞]"
+  },
+  {
+    "id": "w_040",
+    "category": "疑問詞",
+    "pos": "疑問詞",
+    "source": "初01",
+    "baseWord": "who (polite)",
+    "meaningZh": "哪一位（誰的禮貌說法）",
+    "targets": {
+      "ja": "どなた",
+      "es": "quién (formal)"
+    },
+    "phonetics": {
+      "ja": "donata (常體: 誰 / だれ)",
+      "es": "kyen"
+    },
+    "meta": "[疑問詞・敬語]"
+  },
+  {
+    "id": "w_041",
+    "category": "學術教育",
+    "pos": "名詞",
+    "source": "初01",
+    "baseWord": "major / specialty",
+    "meaningZh": "主修 / 專業",
+    "targets": {
+      "ja": "専門",
+      "es": "la especialidad"
+    },
+    "phonetics": {
+      "ja": "senmon",
+      "es": "la es-pe-sya-li-dad"
+    },
+    "meta": "[陰性名詞 (la)]"
+  },
+  {
+    "id": "w_042",
+    "category": "學術教育",
+    "pos": "名詞",
+    "source": "初01",
+    "baseWord": "economics",
+    "meaningZh": "經濟 / 經濟學",
+    "targets": {
+      "ja": "経済",
+      "es": "la economía"
+    },
+    "phonetics": {
+      "ja": "keizai",
+      "es": "la e-ko-no-mi-a"
+    },
+    "meta": "[陰性名詞 (la)]"
+  },
+  {
+    "id": "w_043",
+    "category": "生活實用",
+    "pos": "名詞",
+    "source": "初01",
+    "baseWord": "email address",
+    "meaningZh": "電子郵件地址",
+    "targets": {
+      "ja": "メールアドレス",
+      "es": "el correo electrónico"
+    },
+    "phonetics": {
+      "ja": "meeru adoresu",
+      "es": "el kor-re-o e-lek-tro-ni-ko"
+    },
+    "meta": "[陽性名詞 (el)]"
+  },
+  {
+    "id": "w_044",
+    "category": "生活用品",
+    "pos": "名詞",
+    "source": "初01",
+    "baseWord": "computer",
+    "meaningZh": "電腦",
+    "targets": {
+      "ja": "コンピューター",
+      "es": "la computadora"
+    },
+    "phonetics": {
+      "ja": "konpyuutaa (口語: パソコン)",
+      "es": "la kom-pu-ta-do-ra"
+    },
+    "meta": "[陰性名詞 (la)]"
+  },
+  {
+    "id": "w_045",
+    "category": "日常應答",
+    "pos": "感嘆詞",
+    "source": "初01",
+    "baseWord": "yes",
+    "meaningZh": "是的 / 對",
+    "targets": {
+      "ja": "はい",
+      "es": "sí"
+    },
+    "phonetics": {
+      "ja": "hai (常體: うん)",
+      "es": "si"
+    },
+    "meta": "[感嘆詞/肯定應答]"
+  },
+  {
+    "id": "w_046",
+    "category": "日常應答",
+    "pos": "感嘆詞",
+    "source": "初01",
+    "baseWord": "no",
+    "meaningZh": "不是 / 不",
+    "targets": {
+      "ja": "いいえ",
+      "es": "no"
+    },
+    "phonetics": {
+      "ja": "iie (常體: ううん)",
+      "es": "no"
+    },
+    "meta": "[感嘆詞/否定應答]"
+  },
+  {
+    "id": "w_047",
+    "category": "數量單位",
+    "pos": "量詞",
+    "source": "初01",
+    "baseWord": "...years old",
+    "meaningZh": "～歲",
+    "targets": {
+      "ja": "〜歳",
+      "es": "el año de edad"
+    },
+    "phonetics": {
+      "ja": "sai",
+      "es": "el a-nyo de e-dad"
+    },
+    "meta": "[量詞/接尾詞]"
+  },
+  {
+    "id": "w_048",
+    "category": "語氣助詞",
+    "pos": "助詞",
+    "source": "初01",
+    "baseWord": "right? / isn't it?",
+    "meaningZh": "～耶、～對吧？",
+    "targets": {
+      "ja": "〜ね",
+      "es": "¿verdad?"
+    },
+    "phonetics": {
+      "ja": "ne",
+      "es": "ber-dad"
+    },
+    "meta": "[終助詞・確認/徵求同意]"
+  },
+  {
+    "id": "w_049",
+    "category": "語氣助詞",
+    "pos": "助詞",
+    "source": "初01",
+    "baseWord": "you know / I assure you",
+    "meaningZh": "～囉、～唷",
+    "targets": {
+      "ja": "〜よ",
+      "es": "te aseguro"
+    },
+    "phonetics": {
+      "ja": "yo",
+      "es": "te a-se-gu-ro"
+    },
+    "meta": "[終助詞・告知/強調]"
+  }
+];
 
     const INITIAL_SENTENCES = [
       {
@@ -508,7 +1306,7 @@
 
       normalizeWord(w) {
         if (!w) return w;
-        // 1. 若 pos 存於 targets.pos (來自 Google Apps Script 舊版映射)，自動正規化至 root
+        // 1. 若 pos 存於 targets.pos (來自 Google Apps Script 映射)，自動正規化至 root
         if (!w.pos && w.targets && w.targets.pos) {
           w.pos = String(w.targets.pos).trim();
           delete w.targets.pos;
@@ -520,9 +1318,30 @@
           else if (m.includes('動詞')) w.pos = '動詞';
           else if (m.includes('形容詞')) w.pos = '形容詞';
           else if (m.includes('副詞')) w.pos = '副詞';
+          else if (m.includes('代名詞')) w.pos = '代名詞';
+          else if (m.includes('疑問詞')) w.pos = '疑問詞';
+          else if (m.includes('量詞')) w.pos = '量詞';
+          else if (m.includes('助詞')) w.pos = '助詞';
           else if (m.includes('感嘆詞') || m.includes('問候語')) w.pos = '感嘆詞';
         }
-        // 3. 確保 meta 欄位亦不會遺留在 targets.meta
+        // 3. 詞來源 (source / 詞來源) 自動正規化與向後相容補全
+        if (!w.source) {
+          if (w['詞來源']) {
+            w.source = String(w['詞來源']).trim();
+          } else if (w.targets && (w.targets['詞來源'] || w.targets.source)) {
+            w.source = String(w.targets['詞來源'] || w.targets.source).trim();
+            delete w.targets['詞來源'];
+            delete w.targets.source;
+          }
+        }
+        // 4. 若依然無 source，針對現有試算表已標註的 w_019 ~ w_049 自動補全為「初01」
+        if (!w.source) {
+          const idNum = parseInt(String(w.id || '').replace(/\D/g, ''), 10);
+          if (idNum >= 19 && idNum <= 49) {
+            w.source = '初01';
+          }
+        }
+        // 5. 確保 meta 欄位亦不會遺留在 targets.meta
         if (!w.meta && w.targets && w.targets.meta) {
           w.meta = String(w.targets.meta).trim();
           delete w.targets.meta;
@@ -534,6 +1353,12 @@
         const list = Security.safeJsonParse(localStorage.getItem(this.KEY_VOCAB), INITIAL_VOCABULARY);
         if (Array.isArray(list)) {
           list.forEach(w => this.normalizeWord(w));
+          // 自然數值排序 (無論超過 999 筆到達 w_1000, w_100000 均永遠保持自然數值排序，絕不錯亂)
+          list.sort((a, b) => {
+            const numA = parseInt(String(a.id || '').replace(/\D/g, ''), 10) || 0;
+            const numB = parseInt(String(b.id || '').replace(/\D/g, ''), 10) || 0;
+            return numA - numB;
+          });
         }
         return list;
       },
@@ -626,6 +1451,23 @@
           }
         });
         return set.size > 0 ? Array.from(set) : ["名詞", "動詞", "形容詞", "副詞", "感嘆詞"];
+      },
+
+      getSourceList() {
+        // 動態提取詞庫所有真實存在的詞來源標籤 (例如：初01、自選、第1課)
+        const vocab = this.getVocab();
+        const set = new Set();
+        vocab.forEach(w => {
+          if (w.source && typeof w.source === 'string') {
+            const trimmed = w.source.trim();
+            if (trimmed) set.add(trimmed);
+          }
+        });
+        // 確保詞庫若包含 w_019 ~ w_049，至少具備「初01」選項
+        if (vocab.some(w => (w.source && w.source.trim() === '初01') || (parseInt(String(w.id || '').replace(/\D/g, ''), 10) >= 19 && parseInt(String(w.id || '').replace(/\D/g, ''), 10) <= 49))) {
+          set.add('初01');
+        }
+        return Array.from(set);
       },
       addCategory(cat) {
         if (!cat || typeof cat !== 'string') return;
@@ -782,9 +1624,9 @@ ${JSON.stringify(existingData, null, 2)}` }]
     /**
      * 6. 通用過濾器
      */
-    function filterVocabulary(vocabList, selectedCategory, selectedPos, selectedMastery, targetLangCode) {
+    function filterVocabulary(vocabList, selectedCategory, selectedPos, selectedSource, selectedMastery, targetLangCode) {
       return vocabList.filter(word => {
-        if (selectedCategory !== 'ALL') {
+        if (selectedCategory && selectedCategory !== 'ALL') {
           const wordCat = (word.category || '').trim();
           if (wordCat !== selectedCategory.trim()) return false;
         }
@@ -793,6 +1635,11 @@ ${JSON.stringify(existingData, null, 2)}` }]
           const wordPos = (word.pos || '').trim();
           const sel = selectedPos.trim();
           if (wordPos !== sel && !wordPos.includes(sel) && !sel.includes(wordPos)) return false;
+        }
+
+        if (selectedSource && selectedSource !== 'ALL') {
+          const wordSrc = (word.source || '').trim();
+          if (wordSrc !== selectedSource.trim()) return false;
         }
 
         if (selectedMastery !== 'ALL') {
@@ -826,6 +1673,7 @@ ${JSON.stringify(existingData, null, 2)}` }]
       currentIndex: 0,
       filterCategory: 'ALL',
       filterPos: 'ALL',
+      filterSource: 'ALL',
       filterMastery: 'ALL',
       revealedState: {},
       revealedZh: false,
@@ -835,29 +1683,37 @@ ${JSON.stringify(existingData, null, 2)}` }]
         const allVocab = Storage.getVocab();
         const categories = Storage.getCategories();
         const posList = Storage.getPosList();
+        const sourceList = Storage.getSourceList();
         if (this.filterCategory !== 'ALL' && !categories.includes(this.filterCategory)) {
           this.filterCategory = 'ALL';
         }
         if (this.filterPos !== 'ALL' && !posList.includes(this.filterPos)) {
           this.filterPos = 'ALL';
         }
+        if (this.filterSource !== 'ALL' && !sourceList.includes(this.filterSource)) {
+          this.filterSource = 'ALL';
+        }
         const activeLangs = Storage.getUserLangs().filter(l => Storage.isLangActive(l.code));
         const primaryLangCode = activeLangs[0]?.code || 'ja';
 
-        const filteredVocab = filterVocabulary(allVocab, this.filterCategory, this.filterPos, this.filterMastery, primaryLangCode);
+        const filteredVocab = filterVocabulary(allVocab, this.filterCategory, this.filterPos, this.filterSource, this.filterMastery, primaryLangCode);
 
         const filterBarHtml = `
-          <div class="grid grid-cols-3 gap-1.5 mb-3 bg-slate-950/70 p-2 rounded-xl border border-slate-800 text-xs">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mb-3 bg-slate-950/70 p-2 rounded-xl border border-slate-800 text-xs">
             <select data-change="flashcard-category" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-white truncate">
-              <option value="ALL" ${this.filterCategory === 'ALL' ? 'selected' : ''}>📁 情境</option>
+              <option value="ALL" ${this.filterCategory === 'ALL' ? 'selected' : ''}>📁 全部情境</option>
               ${categories.map(c => `<option value="${Security.escape(c)}" ${this.filterCategory === c ? 'selected' : ''}>${Security.escape(c)}</option>`).join('')}
             </select>
             <select data-change="flashcard-pos" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-white truncate">
-              <option value="ALL" ${this.filterPos === 'ALL' ? 'selected' : ''}>🏷️ 詞性</option>
+              <option value="ALL" ${this.filterPos === 'ALL' ? 'selected' : ''}>🏷️ 全部詞性</option>
               ${posList.map(p => `<option value="${Security.escape(p)}" ${this.filterPos === p ? 'selected' : ''}>${Security.escape(p)}</option>`).join('')}
             </select>
+            <select data-change="flashcard-source" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-white truncate">
+              <option value="ALL" ${this.filterSource === 'ALL' ? 'selected' : ''}>🔖 全部來源</option>
+              ${sourceList.map(s => `<option value="${Security.escape(s)}" ${this.filterSource === s ? 'selected' : ''}>${Security.escape(s)}</option>`).join('')}
+            </select>
             <select data-change="flashcard-mastery" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-white truncate">
-              <option value="ALL" ${this.filterMastery === 'ALL' ? 'selected' : ''}>🎯 熟練度</option>
+              <option value="ALL" ${this.filterMastery === 'ALL' ? 'selected' : ''}>🎯 全部熟練度</option>
               <option value="DUE" ${this.filterMastery === 'DUE' ? 'selected' : ''}>⚠️ 待複習</option>
               <option value="NEW" ${this.filterMastery === 'NEW' ? 'selected' : ''}>🌱 新單字</option>
               <option value="LEARNING" ${this.filterMastery === 'LEARNING' ? 'selected' : ''}>📖 學習中</option>
@@ -1036,6 +1892,11 @@ ${JSON.stringify(existingData, null, 2)}` }]
                       <span>🏷️</span> <span>${Security.escape(word.pos)}</span>
                     </span>
                   ` : ''}
+                  ${word.source ? `
+                    <span class="bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-lg text-xs font-semibold flex items-center gap-1 shadow-sm">
+                      <span>🔖</span> <span>${Security.escape(word.source)}</span>
+                    </span>
+                  ` : ''}
                 </div>
                 <div class="flex items-center gap-2">
                   <button data-action="toggle-es-gender" class="text-[10px] ${Storage.isEsGenderEnabled() ? 'text-pink-300' : 'text-slate-500'} hover:text-white underline">
@@ -1100,8 +1961,26 @@ ${JSON.stringify(existingData, null, 2)}` }]
 
       changeCategory(c) { this.filterCategory = c; this.currentIndex = 0; router.refresh(); },
       changePos(p) { this.filterPos = p; this.currentIndex = 0; router.refresh(); },
+      changeSource(s) {
+        this.filterSource = s;
+        this.currentIndex = 0;
+        const allVocab = Storage.getVocab();
+        const activeLangs = Storage.getUserLangs().filter(l => Storage.isLangActive(l.code));
+        const primaryLangCode = activeLangs[0]?.code || 'ja';
+        let filtered = filterVocabulary(allVocab, this.filterCategory, this.filterPos, this.filterSource, this.filterMastery, primaryLangCode);
+        if (filtered.length === 0 && s !== 'ALL') {
+          if (this.filterCategory !== 'ALL') {
+            this.filterCategory = 'ALL';
+            filtered = filterVocabulary(allVocab, this.filterCategory, this.filterPos, this.filterSource, this.filterMastery, primaryLangCode);
+          }
+          if (filtered.length === 0 && this.filterPos !== 'ALL') {
+            this.filterPos = 'ALL';
+          }
+        }
+        router.refresh();
+      },
       changeMastery(m) { this.filterMastery = m; this.currentIndex = 0; router.refresh(); },
-      resetFilter() { this.filterCategory = 'ALL'; this.filterPos = 'ALL'; this.filterMastery = 'ALL'; router.refresh(); },
+      resetFilter() { this.filterCategory = 'ALL'; this.filterPos = 'ALL'; this.filterSource = 'ALL'; this.filterMastery = 'ALL'; router.refresh(); },
       revealZh() { this.revealedZh = true; router.refresh(); },
       togglePhonetics() { this.showPhonetics = !this.showPhonetics; router.refresh(); },
 
@@ -1110,7 +1989,7 @@ ${JSON.stringify(existingData, null, 2)}` }]
         if (this.revealedState[langCode]) {
           const allVocab = Storage.getVocab();
           const activeLangs = Storage.getUserLangs().filter(l => Storage.isLangActive(l.code));
-          const filtered = filterVocabulary(allVocab, this.filterCategory, this.filterMastery, activeLangs[0]?.code);
+          const filtered = filterVocabulary(allVocab, this.filterCategory, this.filterPos, this.filterSource, this.filterMastery, activeLangs[0]?.code);
           const word = filtered[this.currentIndex];
           if (word && word.targets && word.targets[langCode]) TTS.speak(word.targets[langCode], langCode);
         }
@@ -1120,7 +1999,7 @@ ${JSON.stringify(existingData, null, 2)}` }]
       rate(langCode, quality) {
         const allVocab = Storage.getVocab();
         const activeLangs = Storage.getUserLangs().filter(l => Storage.isLangActive(l.code));
-        const filtered = filterVocabulary(allVocab, this.filterCategory, this.filterMastery, activeLangs[0]?.code);
+        const filtered = filterVocabulary(allVocab, this.filterCategory, this.filterPos, this.filterSource, this.filterMastery, activeLangs[0]?.code);
         const word = filtered[this.currentIndex];
         Storage.saveLangSrs(word.id, langCode, quality);
         router.updateStats();
@@ -1147,6 +2026,7 @@ ${JSON.stringify(existingData, null, 2)}` }]
       currentIndex: 0,
       filterCategory: 'ALL',
       filterPos: 'ALL',
+      filterSource: 'ALL',
       filterMastery: 'ALL',
       mode: 'readWrite',
       activeLang: 'ja',
@@ -1157,11 +2037,15 @@ ${JSON.stringify(existingData, null, 2)}` }]
         const allVocab = Storage.getVocab();
         const categories = Storage.getCategories();
         const posList = Storage.getPosList();
+        const sourceList = Storage.getSourceList();
         if (this.filterCategory !== 'ALL' && !categories.includes(this.filterCategory)) {
           this.filterCategory = 'ALL';
         }
         if (this.filterPos !== 'ALL' && !posList.includes(this.filterPos)) {
           this.filterPos = 'ALL';
+        }
+        if (this.filterSource !== 'ALL' && !sourceList.includes(this.filterSource)) {
+          this.filterSource = 'ALL';
         }
         const activeLangs = Storage.getUserLangs().filter(l => Storage.isLangActive(l.code));
 
@@ -1169,20 +2053,24 @@ ${JSON.stringify(existingData, null, 2)}` }]
           this.activeLang = activeLangs[0].code;
         }
 
-        const filteredVocab = filterVocabulary(allVocab, this.filterCategory, this.filterPos, this.filterMastery, this.activeLang);
+        const filteredVocab = filterVocabulary(allVocab, this.filterCategory, this.filterPos, this.filterSource, this.filterMastery, this.activeLang);
 
         const filterBarHtml = `
-          <div class="grid grid-cols-3 gap-1.5 mb-2 bg-slate-950/70 p-2 rounded-xl border border-slate-800 text-xs">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mb-2 bg-slate-950/70 p-2 rounded-xl border border-slate-800 text-xs">
             <select data-change="spelling-category" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white truncate">
-              <option value="ALL" ${this.filterCategory === 'ALL' ? 'selected' : ''}>📁 情境</option>
+              <option value="ALL" ${this.filterCategory === 'ALL' ? 'selected' : ''}>📁 全部情境</option>
               ${categories.map(c => `<option value="${Security.escape(c)}" ${this.filterCategory === c ? 'selected' : ''}>${Security.escape(c)}</option>`).join('')}
             </select>
             <select data-change="spelling-pos" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white truncate">
-              <option value="ALL" ${this.filterPos === 'ALL' ? 'selected' : ''}>🏷️ 詞性</option>
+              <option value="ALL" ${this.filterPos === 'ALL' ? 'selected' : ''}>🏷️ 全部詞性</option>
               ${posList.map(p => `<option value="${Security.escape(p)}" ${this.filterPos === p ? 'selected' : ''}>${Security.escape(p)}</option>`).join('')}
             </select>
+            <select data-change="spelling-source" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white truncate">
+              <option value="ALL" ${this.filterSource === 'ALL' ? 'selected' : ''}>🔖 全部來源</option>
+              ${sourceList.map(s => `<option value="${Security.escape(s)}" ${this.filterSource === s ? 'selected' : ''}>${Security.escape(s)}</option>`).join('')}
+            </select>
             <select data-change="spelling-mastery" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white truncate">
-              <option value="ALL" ${this.filterMastery === 'ALL' ? 'selected' : ''}>🎯 熟練度</option>
+              <option value="ALL" ${this.filterMastery === 'ALL' ? 'selected' : ''}>🎯 全部熟練度</option>
               <option value="DUE" ${this.filterMastery === 'DUE' ? 'selected' : ''}>⚠️ 待複習</option>
               <option value="NEW" ${this.filterMastery === 'NEW' ? 'selected' : ''}>🌱 新單字</option>
               <option value="LEARNING" ${this.filterMastery === 'LEARNING' ? 'selected' : ''}>📖 學習中</option>
@@ -1252,6 +2140,11 @@ ${JSON.stringify(existingData, null, 2)}` }]
                 ${word.pos ? `
                   <span class="bg-amber-950/80 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-lg text-xs font-semibold flex items-center gap-1">
                     <span>🏷️</span> <span>${Security.escape(word.pos)}</span>
+                  </span>
+                ` : ''}
+                ${word.source ? `
+                  <span class="bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-lg text-xs font-semibold flex items-center gap-1">
+                    <span>🔖</span> <span>${Security.escape(word.source)}</span>
                   </span>
                 ` : ''}
               </div>
@@ -1326,8 +2219,25 @@ ${JSON.stringify(existingData, null, 2)}` }]
 
       changeCategory(c) { this.filterCategory = c; this.currentIndex = 0; this.results = {}; router.refresh(); },
       changePos(p) { this.filterPos = p; this.currentIndex = 0; this.results = {}; router.refresh(); },
+      changeSource(s) {
+        this.filterSource = s;
+        this.currentIndex = 0;
+        this.results = {};
+        const allVocab = Storage.getVocab();
+        let filtered = filterVocabulary(allVocab, this.filterCategory, this.filterPos, this.filterSource, this.filterMastery, this.activeLang);
+        if (filtered.length === 0 && s !== 'ALL') {
+          if (this.filterCategory !== 'ALL') {
+            this.filterCategory = 'ALL';
+            filtered = filterVocabulary(allVocab, this.filterCategory, this.filterPos, this.filterSource, this.filterMastery, this.activeLang);
+          }
+          if (filtered.length === 0 && this.filterPos !== 'ALL') {
+            this.filterPos = 'ALL';
+          }
+        }
+        router.refresh();
+      },
       changeMastery(m) { this.filterMastery = m; this.currentIndex = 0; this.results = {}; router.refresh(); },
-      resetFilter() { this.filterCategory = 'ALL'; this.filterPos = 'ALL'; this.filterMastery = 'ALL'; router.refresh(); },
+      resetFilter() { this.filterCategory = 'ALL'; this.filterPos = 'ALL'; this.filterSource = 'ALL'; this.filterMastery = 'ALL'; router.refresh(); },
       toggleHint() { this.showHint = true; router.refresh(); },
       setSubMode(m) { this.mode = m; this.results = {}; this.showHint = false; router.refresh(); },
       selectLang(code) { this.activeLang = code; this.results = {}; this.showHint = false; router.refresh(); },
@@ -1337,7 +2247,7 @@ ${JSON.stringify(existingData, null, 2)}` }]
         if (!input) return;
         const val = input.value.trim();
         const allVocab = Storage.getVocab();
-        const filtered = filterVocabulary(allVocab, this.filterCategory, this.filterMastery, this.activeLang);
+        const filtered = filterVocabulary(allVocab, this.filterCategory, this.filterPos, this.filterSource, this.filterMastery, this.activeLang);
         const word = filtered[this.currentIndex];
         const correctTarget = (word.targets && word.targets[this.activeLang] || '').trim();
 
@@ -1805,19 +2715,24 @@ ${JSON.stringify(existingData, null, 2)}` }]
                   class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500" />
               </div>
 
-              <div class="grid grid-cols-2 gap-2">
+              <div class="grid grid-cols-3 gap-2">
                 <div class="space-y-1">
-                  <label class="block text-xs font-semibold text-slate-300">分類</label>
-                  <select id="select_category" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500">
-                    <option value="__AUTO__">✨ AI 自動分類</option>
+                  <label class="block text-xs font-semibold text-slate-300">情境分類</label>
+                  <select id="select_category" class="w-full px-2.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500">
+                    <option value="__AUTO__">✨ AI 分類</option>
                     ${categories.map(c => `<option value="${Security.escape(c)}">${Security.escape(c)}</option>`).join('')}
-                    <option value="__NEW__">+ 自訂新分類...</option>
+                    <option value="__NEW__">+ 自訂...</option>
                   </select>
                 </div>
                 <div class="space-y-1">
                   <label class="block text-xs font-semibold text-amber-300">詞性標籤</label>
-                  <input type="text" id="input_pos" placeholder="如：名詞 / 動詞 (留白由 AI 自動判定)" 
-                    class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-amber-500" />
+                  <input type="text" id="input_pos" placeholder="如：名詞 / 動詞" 
+                    class="w-full px-2.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-amber-500" />
+                </div>
+                <div class="space-y-1">
+                  <label class="block text-xs font-semibold text-emerald-300">詞來源 (選填)</label>
+                  <input type="text" id="input_source" placeholder="如：初01" 
+                    class="w-full px-2.5 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500" />
                 </div>
               </div>
 
@@ -1843,6 +2758,7 @@ ${JSON.stringify(existingData, null, 2)}` }]
         const meaningZh = (document.getElementById('input_meaningZh')?.value || '').trim();
         const category = document.getElementById('select_category')?.value;
         const pos = (document.getElementById('input_pos')?.value || '').trim();
+        const source = (document.getElementById('input_source')?.value || '').trim();
         const targets = {};
         const phonetics = {};
 
@@ -1851,7 +2767,7 @@ ${JSON.stringify(existingData, null, 2)}` }]
           phonetics[lang.code] = (document.getElementById(`phonetic_${lang.code}`)?.value || '').trim();
         });
 
-        return { baseWord, meaningZh, category, pos, targets, phonetics };
+        return { baseWord, meaningZh, category, pos, source, targets, phonetics };
       },
 
       applyAiResult(aiResult) {
@@ -1946,6 +2862,7 @@ ${JSON.stringify(existingData, null, 2)}` }]
           id: (isTest ? 'test_' : 'w_') + Date.now(),
           category: (isTest ? '[測試] ' : '') + finalCategory,
           pos: formValues.pos || '詞彙',
+          source: formValues.source || '',
           baseWord: formValues.baseWord || formValues.meaningZh || 'Untranslated',
           meaningZh: formValues.meaningZh || '',
           targets: formValues.targets,
@@ -2328,6 +3245,15 @@ ${JSON.stringify(existingData, null, 2)}` }]
               w.pos = w.targets.pos;
               delete w.targets.pos;
             }
+            if (!w.source) {
+              if (w['詞來源']) {
+                w.source = w['詞來源'];
+              } else if (w.targets && (w.targets['詞來源'] || w.targets.source)) {
+                w.source = w.targets['詞來源'] || w.targets.source;
+                delete w.targets['詞來源'];
+                delete w.targets.source;
+              }
+            }
             if (!w.meta && w.targets && w.targets.meta) {
               w.meta = w.targets.meta;
               delete w.targets.meta;
@@ -2608,7 +3534,7 @@ ${JSON.stringify(existingData, null, 2)}` }]
           const currentLang = activeLangs.find(l => l.code === SpellingView.activeLang) || activeLangs[0];
           const curRes = SpellingView.results[currentLang.code];
           const allVocab = Storage.getVocab();
-          const filtered = filterVocabulary(allVocab, SpellingView.filterCategory, SpellingView.filterMastery, currentLang.code);
+          const filtered = filterVocabulary(allVocab, SpellingView.filterCategory, SpellingView.filterPos, SpellingView.filterSource, SpellingView.filterMastery, currentLang.code);
           if (curRes && curRes.isChecked) {
             SpellingView.next(filtered.length);
           } else {
@@ -2630,6 +3556,9 @@ ${JSON.stringify(existingData, null, 2)}` }]
         case 'flashcard-pos':
           FlashcardView.changePos(el.value);
           break;
+        case 'flashcard-source':
+          FlashcardView.changeSource(el.value);
+          break;
         case 'flashcard-mastery':
           FlashcardView.changeMastery(el.value);
           break;
@@ -2638,6 +3567,9 @@ ${JSON.stringify(existingData, null, 2)}` }]
           break;
         case 'spelling-pos':
           SpellingView.changePos(el.value);
+          break;
+        case 'spelling-source':
+          SpellingView.changeSource(el.value);
           break;
         case 'spelling-mastery':
           SpellingView.changeMastery(el.value);
